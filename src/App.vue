@@ -1,47 +1,122 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { onMounted } from 'vue'
+import AppSidebar from '@/components/layout/AppSidebar.vue'
+import AppHeader from '@/components/layout/AppHeader.vue'
+import ToastNotification from '@/components/layout/ToastNotification.vue'
+import DashboardView from '@/views/DashboardView.vue'
+import CatalogView from '@/views/CatalogView.vue'
+import PlanningView from '@/views/PlanningView.vue'
+import GroceriesView from '@/views/GroceriesView.vue'
+import SettingsView from '@/views/SettingsView.vue'
+import { useApp } from '@/composables/useApp.js'
+
+const { currentView, loading, init } = useApp()
+
+onMounted(() => init())
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <AppSidebar class="app-shell__sidebar" />
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+    <!-- Main -->
+    <div class="app-shell__main">
+      <AppHeader />
+
+      <!-- Loading state -->
+      <div v-if="loading" class="app-shell__loader">
+        <div class="app-shell__spinner" />
+        <p>Chargement…</p>
+      </div>
+
+      <!-- Views -->
+      <main v-else class="app-shell__content custom-scrollbar">
+        <Transition name="view" mode="out-in">
+          <DashboardView v-if="currentView === 'dashboard'" key="dashboard" />
+          <CatalogView v-else-if="currentView === 'catalog'" key="catalog" />
+          <PlanningView v-else-if="currentView === 'planning'" key="planning" />
+          <GroceriesView v-else-if="currentView === 'groceries'" key="groceries" />
+          <SettingsView v-else-if="currentView === 'settings'" key="settings" />
+        </Transition>
+      </main>
     </div>
-  </header>
 
-  <main>
-    <TheWelcome />
-  </main>
+    <ToastNotification />
+  </div>
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
+.app-shell {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--kubo-bg);
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+/* Sidebar masquée sur mobile */
+.app-shell__sidebar {
+  display: none;
+}
+@media (min-width: 768px) {
+  .app-shell__sidebar {
+    display: flex;
+  }
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
+.app-shell__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
+.app-shell__content {
+  flex: 1;
+  overflow-y: auto;
+}
 
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
+/* Loader */
+.app-shell__loader {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--kubo-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+.app-shell__spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--kubo-border);
+  border-top-color: var(--kubo-green);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
+}
+
+/* View transitions */
+.view-enter-active,
+.view-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.view-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.view-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>
