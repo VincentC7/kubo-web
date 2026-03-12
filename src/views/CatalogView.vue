@@ -11,7 +11,16 @@ import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
 import FilterModal from '@/components/recipes/FilterModal.vue'
 import { useApp } from '@/composables/useApp.js'
 
-const { filteredRecipes, isSelected, toggleRecipe, setSearch, filters, notify } = useApp()
+const {
+  filteredRecipes,
+  isSelected,
+  toggleRecipe,
+  setSearch,
+  filters,
+  notify,
+  selectedRecipes,
+  mealsGoal,
+} = useApp()
 
 const filterOpen = ref(false)
 const detailRecipe = ref(null)
@@ -41,8 +50,13 @@ function handleModalToggle() {
     <!-- Header -->
     <header class="catalog__header">
       <div>
-        <h1 class="catalog__title">Recettes</h1>
-        <p class="catalog__sub">Découvrez les saveurs de la semaine.</p>
+        <h1 class="catalog__title">Explorer les Recettes</h1>
+        <p class="catalog__sub">
+          Découvrez les saveurs de la semaine.
+          <span class="catalog__counter"
+            >{{ selectedRecipes.length }} / {{ mealsGoal }} sélectionnés</span
+          >
+        </p>
       </div>
       <div class="catalog__actions">
         <KuboInput
@@ -127,6 +141,16 @@ function handleModalToggle() {
   font-weight: 600;
   color: var(--kubo-text-muted);
   margin-top: 4px;
+}
+.catalog__counter {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--kubo-green);
+  background: var(--kubo-green-light);
+  padding: 2px 10px;
+  border-radius: var(--radius-xs);
 }
 
 .catalog__actions {

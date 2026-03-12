@@ -1,32 +1,42 @@
 <script setup>
 /**
- * AppHeader — Organisme en-tête global sticky
+ * AppHeader — Organisme en-tête global sticky (contextuel)
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
+import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboProgressBar from '@/components/ui/KuboProgressBar.vue'
 import { useApp } from '@/composables/useApp.js'
 
-const { weekRange, changeWeek, progressPercent, selectedRecipes, doneRecipes, user } = useApp()
+const {
+  currentView,
+  periodLabel,
+  changePeriod,
+  progressPercent,
+  progressLabel,
+  progressText,
+  clearPlanning,
+  user,
+} = useApp()
 </script>
 
 <template>
-  <header class="app-header" data-testid="app-header">
-    <!-- Week selector -->
+  <header v-if="currentView !== 'settings'" class="app-header" data-testid="app-header">
+    <!-- Period selector -->
     <div class="app-header__week" data-testid="week-selector">
       <button
         class="app-header__week-btn"
-        title="Semaine précédente"
+        title="Période précédente"
         data-testid="week-prev"
-        @click="changeWeek(-1)"
+        @click="changePeriod(-1)"
       >
         <KuboIcon name="chevron-left" :size="18" />
       </button>
-      <span class="app-header__week-label" data-testid="week-label">{{ weekRange }}</span>
+      <span class="app-header__week-label" data-testid="week-label">{{ periodLabel }}</span>
       <button
         class="app-header__week-btn"
-        title="Semaine suivante"
+        title="Période suivante"
         data-testid="week-next"
-        @click="changeWeek(1)"
+        @click="changePeriod(1)"
       >
         <KuboIcon name="chevron-right" :size="18" />
       </button>
@@ -34,26 +44,25 @@ const { weekRange, changeWeek, progressPercent, selectedRecipes, doneRecipes, us
 
     <!-- Right -->
     <div class="app-header__right">
+      <!-- Reset button (planning only) -->
+      <KuboButton
+        v-if="currentView === 'planning'"
+        variant="danger"
+        size="sm"
+        data-testid="toolbar-reset-btn"
+        @click="clearPlanning"
+      >
+        <KuboIcon name="rotate-ccw" :size="14" />
+        Reset
+      </KuboButton>
+
       <!-- Progress -->
       <div class="app-header__progress">
-        <p class="app-header__progress-label">Avancement</p>
+        <p class="app-header__progress-label">{{ progressLabel }}</p>
         <div class="app-header__progress-bar">
-          <span class="app-header__progress-text"
-            >{{ doneRecipes.length }}/{{ selectedRecipes.length }}</span
-          >
+          <span class="app-header__progress-text">{{ progressText }}</span>
           <KuboProgressBar :value="progressPercent" :thin="true" />
         </div>
-      </div>
-
-      <!-- Avatar -->
-      <div class="app-header__avatar">
-        <img
-          v-if="user?.avatar"
-          :src="user.avatar"
-          :alt="user?.name"
-          class="app-header__avatar-img"
-        />
-        <span v-else>{{ user?.initials }}</span>
       </div>
     </div>
   </header>

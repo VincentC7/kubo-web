@@ -36,10 +36,10 @@ const MOCK_RECIPES = [
     difficulty: 'Facile',
     tags: ['Bio', 'Épicé', 'Frais'],
     ingredients: [
-      { name: 'Pâte de curry rouge', qty: '2 c.s.' },
-      { name: 'Lait de coco', qty: '400 ml' },
-      { name: 'Aubergines', qty: '2' },
-      { name: 'Basilic thaï', qty: '1 botte' },
+      { name: 'Pâte de curry rouge', qty: '2 c.s.', price: 3.5 },
+      { name: 'Lait de coco', qty: '400 ml', price: 1.8 },
+      { name: 'Aubergines', qty: '2', price: 2.2 },
+      { name: 'Basilic thaï', qty: '1 botte', price: 1.5 },
     ],
     steps: [
       "Faire revenir la pâte de curry dans un wok avec un filet d'huile jusqu'à ce qu'elle soit parfumée.",
@@ -62,10 +62,10 @@ const MOCK_RECIPES = [
     difficulty: 'Facile',
     tags: ['Végé', 'Crunchy', 'Bio'],
     ingredients: [
-      { name: 'Labneh', qty: '200 g' },
-      { name: 'Broccolini', qty: '300 g' },
-      { name: "Za'atar", qty: '1 c.s.' },
-      { name: 'Noisettes torréfiées', qty: '40 g' },
+      { name: 'Labneh', qty: '200 g', price: 4.2 },
+      { name: 'Broccolini', qty: '300 g', price: 3.8 },
+      { name: "Za'atar", qty: '1 c.s.', price: 1.5 },
+      { name: 'Noisettes torréfiées', qty: '40 g', price: 2.5 },
     ],
     steps: [
       "Rôtir les broccolinis au four à 200 °C pendant 20 min avec huile et za'atar.",
@@ -87,10 +87,10 @@ const MOCK_RECIPES = [
     difficulty: 'Moyen',
     tags: ['Gratiné', 'Gourmet'],
     ingredients: [
-      { name: 'Champignons mixtes', qty: '500 g' },
-      { name: 'Feuilles de lasagne', qty: '12' },
-      { name: 'Béchamel maison', qty: '500 ml' },
-      { name: 'Gruyère râpé', qty: '150 g' },
+      { name: 'Champignons mixtes', qty: '500 g', price: 3.2 },
+      { name: 'Feuilles de lasagne', qty: '12', price: 2.5 },
+      { name: 'Béchamel maison', qty: '500 ml', price: 2.0 },
+      { name: 'Gruyère râpé', qty: '150 g', price: 4.5 },
     ],
     steps: [
       'Faire sauter les champignons à feu vif avec ail et thym.',
@@ -112,10 +112,10 @@ const MOCK_RECIPES = [
     difficulty: 'Facile',
     tags: ['AOP', 'Noix', 'Bio'],
     ingredients: [
-      { name: 'Poires conférence', qty: '2' },
-      { name: 'Bleu du Vercors', qty: '120 g' },
-      { name: 'Pommes de terre', qty: '400 g' },
-      { name: 'Cerneaux de noix', qty: '50 g' },
+      { name: 'Poires conférence', qty: '2', price: 2.8 },
+      { name: 'Bleu du Vercors', qty: '120 g', price: 3.5 },
+      { name: 'Pommes de terre', qty: '400 g', price: 1.5 },
+      { name: 'Cerneaux de noix', qty: '50 g', price: 3.0 },
     ],
     steps: [
       'Rôtir les pommes de terre en quartiers à 200 °C pendant 30 min.',
@@ -137,10 +137,10 @@ const MOCK_RECIPES = [
     difficulty: 'Facile',
     tags: ['Express', 'Gourmand'],
     ingredients: [
-      { name: 'Gnocchis frais', qty: '500 g' },
-      { name: 'Pesto rosso', qty: '4 c.s.' },
-      { name: 'Burrata', qty: '1' },
-      { name: 'Pignons de pin', qty: '30 g' },
+      { name: 'Gnocchis frais', qty: '500 g', price: 2.2 },
+      { name: 'Pesto rosso', qty: '4 c.s.', price: 3.4 },
+      { name: 'Burrata', qty: '1', price: 4.9 },
+      { name: 'Pignons de pin', qty: '30 g', price: 2.8 },
     ],
     steps: [
       'Faire dorer les gnocchis à la poêle dans du beurre noisette.',
@@ -162,10 +162,10 @@ const MOCK_RECIPES = [
     difficulty: 'Moyen',
     tags: ['Protéines', 'Bio'],
     ingredients: [
-      { name: 'Bœuf haché', qty: '300 g' },
-      { name: 'Riz à sushi', qty: '300 g' },
-      { name: 'Épinards, carottes, courgettes', qty: '300 g total' },
-      { name: 'Gochujang', qty: '2 c.s.' },
+      { name: 'Bœuf haché', qty: '300 g', price: 5.5 },
+      { name: 'Riz à sushi', qty: '300 g', price: 2.8 },
+      { name: 'Épinards, carottes, courgettes', qty: '300 g total', price: 3.0 },
+      { name: 'Gochujang', qty: '2 c.s.', price: 4.2 },
     ],
     steps: [
       'Cuire le riz collant, assaisonner légèrement.',
@@ -187,10 +187,10 @@ const MOCK_RECIPES = [
     difficulty: 'Facile',
     tags: ['Bio', 'Protéines', 'Frais'],
     ingredients: [
-      { name: 'Pavés de saumon', qty: '2 × 150 g' },
-      { name: 'Sauce teriyaki', qty: '4 c.s.' },
-      { name: 'Brocolis', qty: '300 g' },
-      { name: 'Graines de sésame', qty: '1 c.s.' },
+      { name: 'Pavés de saumon', qty: '2 × 150 g', price: 8.5 },
+      { name: 'Sauce teriyaki', qty: '4 c.s.', price: 2.9 },
+      { name: 'Brocolis', qty: '300 g', price: 2.2 },
+      { name: 'Graines de sésame', qty: '1 c.s.', price: 1.0 },
     ],
     steps: [
       'Saisir le saumon côté peau 4 min, retourner 2 min.',
@@ -212,10 +212,10 @@ const MOCK_RECIPES = [
     difficulty: 'Facile',
     tags: ['Frais', 'Léger'],
     ingredients: [
-      { name: 'Saumon sashimi', qty: '200 g' },
-      { name: 'Avocat mûr', qty: '1' },
-      { name: 'Mangue', qty: '½' },
-      { name: 'Riz vinaigré', qty: '200 g cuit' },
+      { name: 'Saumon sashimi', qty: '200 g', price: 9.0 },
+      { name: 'Avocat mûr', qty: '1', price: 1.8 },
+      { name: 'Mangue', qty: '½', price: 2.5 },
+      { name: 'Riz vinaigré', qty: '200 g cuit', price: 1.5 },
     ],
     steps: [
       'Préparer le riz vinaigré et laisser tiédir.',
@@ -237,10 +237,10 @@ const MOCK_RECIPES = [
     difficulty: 'Moyen',
     tags: ['Gourmet', 'Frais'],
     ingredients: [
-      { name: 'Riz Arborio', qty: '300 g' },
-      { name: 'Asperges vertes', qty: '500 g' },
-      { name: 'Parmesan', qty: '80 g' },
-      { name: 'Citron vert', qty: '1' },
+      { name: 'Riz Arborio', qty: '300 g', price: 3.2 },
+      { name: 'Asperges vertes', qty: '500 g', price: 4.5 },
+      { name: 'Parmesan', qty: '80 g', price: 3.8 },
+      { name: 'Citron vert', qty: '1', price: 0.8 },
     ],
     steps: [
       'Nacrer le riz dans du beurre et échalote ciselée.',
@@ -262,10 +262,10 @@ const MOCK_RECIPES = [
     difficulty: 'Facile',
     tags: ['Express', 'Épicé'],
     ingredients: [
-      { name: 'Tortillas blé', qty: '4' },
-      { name: 'Blanc de poulet', qty: '300 g' },
-      { name: 'Avocat', qty: '1' },
-      { name: 'Salsa tomate', qty: '3 c.s.' },
+      { name: 'Tortillas blé', qty: '4', price: 2.0 },
+      { name: 'Blanc de poulet', qty: '300 g', price: 5.0 },
+      { name: 'Avocat', qty: '1', price: 1.8 },
+      { name: 'Salsa tomate', qty: '3 c.s.', price: 2.5 },
     ],
     steps: [
       "Mariner le poulet dans cumin, paprika, huile d'olive 10 min.",

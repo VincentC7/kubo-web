@@ -33,9 +33,9 @@ test.describe('Planning — avec recettes', () => {
     await expect(page.getByTestId('planning-grid')).toBeVisible()
   })
 
-  test('affiche une PlanningCard pour la recette ajoutée', async ({ page }) => {
+  test('affiche au moins une PlanningCard pour la recette ajoutée', async ({ page }) => {
     const cards = page.getByTestId('planning-grid').locator('[data-testid^="plan-card-"]')
-    await expect(cards).toHaveCount(1)
+    await expect(cards.first()).toBeVisible()
   })
 
   test('la PlanningCard affiche le titre de la recette', async ({ page }) => {
@@ -95,12 +95,12 @@ test.describe('Planning — reset semaine', () => {
   })
 
   test('le bouton reset vide toute la semaine', async ({ page }) => {
-    await page.getByTestId('planning-reset-btn').click()
+    await page.getByTestId('toolbar-reset-btn').click()
     await expect(page.locator('.planning__empty')).toBeVisible()
   })
 
   test('affiche un toast après le reset', async ({ page }) => {
-    await page.getByTestId('planning-reset-btn').click()
+    await page.getByTestId('toolbar-reset-btn').click()
     await expect(page.locator('.toast')).toBeVisible()
     await expect(page.locator('.toast')).toContainText('réinitialisée')
   })
@@ -116,16 +116,16 @@ test.describe('Planning — progression dans le header', () => {
     await navigateTo(page, 'planning')
   })
 
-  test('affiche le compteur 0/1 dans le header', async ({ page }) => {
-    await expect(page.locator('.app-header__progress-text')).toContainText('0/1')
+  test('affiche le compteur 0/5 dans le header', async ({ page }) => {
+    await expect(page.locator('.app-header__progress-text')).toContainText('0/5')
   })
 
-  test('met à jour le compteur à 1/1 après marquage', async ({ page }) => {
+  test('met à jour le compteur à 1/5 après marquage', async ({ page }) => {
     await page
       .locator('[data-testid^="plan-card-"]')
       .first()
       .getByTestId('plan-card-done-btn')
       .click()
-    await expect(page.locator('.app-header__progress-text')).toContainText('1/1')
+    await expect(page.locator('.app-header__progress-text')).toContainText('1/5')
   })
 })

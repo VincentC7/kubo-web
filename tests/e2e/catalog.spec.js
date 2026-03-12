@@ -20,14 +20,14 @@ test.describe('Catalogue — affichage', () => {
     await expect(cards).toHaveCount(10) // 10 recettes dans les mocks
   })
 
-  test('chaque carte affiche un titre, un temps et des calories', async ({ page }) => {
+  test('chaque carte affiche un titre, un temps et un prix', async ({ page }) => {
     const firstCard = page
       .getByTestId('recipe-grid')
       .locator('[data-testid^="recipe-card-"]')
       .first()
     await expect(firstCard.locator('.recipe-card__title')).not.toBeEmpty()
     await expect(firstCard.locator('.recipe-card__meta')).toContainText('m') // xx m (minutes)
-    await expect(firstCard.locator('.recipe-card__meta')).toContainText('k') // xx k (kcal)
+    await expect(firstCard.locator('.recipe-card__meta')).toContainText('€') // xx.xx€ (prix)
   })
 
   test('affiche le bouton Filtrer', async ({ page }) => {
@@ -45,11 +45,13 @@ test.describe('Catalogue — recherche', () => {
   test('filtre les recettes en tapant dans la recherche', async ({ page }) => {
     const searchInput = page.locator('input[placeholder="Rechercher…"]')
     await searchInput.fill('curry')
-    await expect(page.getByTestId('recipe-grid').locator('[data-testid^="recipe-card-"]')).toHaveCount(1)
+    await expect(
+      page.getByTestId('recipe-grid').locator('[data-testid^="recipe-card-"]'),
+    ).toHaveCount(1)
     await expect(page.getByTestId('recipe-grid')).toContainText('Curry')
   })
 
-  test('affiche l\'état vide quand aucun résultat', async ({ page }) => {
+  test("affiche l'état vide quand aucun résultat", async ({ page }) => {
     const searchInput = page.locator('input[placeholder="Rechercher…"]')
     await searchInput.fill('xyzimpossible')
     await expect(page.getByTestId('recipe-grid')).toBeHidden()
@@ -111,7 +113,7 @@ test.describe('Catalogue — modale de détail', () => {
     await expect(page.getByTestId('recipe-detail-modal')).toBeHidden()
   })
 
-  test('ferme la modale en cliquant sur l\'overlay', async ({ page }) => {
+  test("ferme la modale en cliquant sur l'overlay", async ({ page }) => {
     const firstCard = page
       .getByTestId('recipe-grid')
       .locator('[data-testid^="recipe-card-"]')
@@ -193,7 +195,6 @@ test.describe('Catalogue — panneau filtres', () => {
     await expect(page.locator('.fm')).toBeHidden()
   })
 
-
   test('filtre par categorie Express', async ({ page }) => {
     await page.getByTestId('filter-btn').click()
     // Cibler uniquement le chip du groupe "Catégorie" (premier fm__group)
@@ -205,4 +206,3 @@ test.describe('Catalogue — panneau filtres', () => {
     expect(count).toBeLessThan(10)
   })
 })
-

@@ -1,38 +1,39 @@
 <script setup>
 /**
- * SettingsView — Vue paramètres utilisateur
+ * SettingsView — Vue paramètres : modules, objectifs, dark mode
  */
 import { ref, watch } from 'vue'
 import KuboCard from '@/components/ui/KuboCard.vue'
-import KuboInput from '@/components/ui/KuboInput.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { useApp } from '@/composables/useApp.js'
-import { apiService } from '@/services/api.js'
 
-const { user, darkMode, toggleDarkMode, notify } = useApp()
+const {
+  darkMode,
+  toggleDarkMode,
+  notify,
+  showInventory,
+  showGroceries,
+  portions,
+  mealsGoal,
+  updatePortions,
+  updateMealsGoal,
+} = useApp()
 
-const localName = ref(user.value?.name ?? '')
-const localKcal = ref(user.value?.goalKcal ?? 2000)
-const saving = ref(false)
+const localShowInventory = ref(showInventory.value)
+const localShowGroceries = ref(showGroceries.value)
 
-// Synchronise si user charge après le montage
-watch(user, (u) => {
-  if (u) {
-    localName.value = u.name
-    localKcal.value = u.goalKcal
-  }
+watch(showInventory, (v) => {
+  localShowInventory.value = v
+})
+watch(showGroceries, (v) => {
+  localShowGroceries.value = v
 })
 
-async function save() {
-  saving.value = true
-  try {
-    await apiService.saveUser({ name: localName.value, goalKcal: Number(localKcal.value) })
-    user.value = { ...user.value, name: localName.value, goalKcal: Number(localKcal.value) }
-    notify('Profil sauvegardé')
-  } finally {
-    saving.value = false
-  }
+function save() {
+  showInventory.value = localShowInventory.value
+  showGroceries.value = localShowGroceries.value
+  notify('Paramètres sauvegardés')
 }
 </script>
 
@@ -43,20 +44,89 @@ async function save() {
     </header>
 
     <div class="settings__stack">
-      <!-- Profil -->
+      <!-- Module Inventaire -->
+      <KuboCard rounded="2xl" class="settings__card settings__card--row">
+        <div class="settings__module-left">
+          <div class="settings__module-icon-wrap">
+            <KuboIcon name="box" :size="22" class="settings__card-icon" />
+          </div>
+          <div>
+            <h3 class="settings__module-title">Module Inventaire</h3>
+            <p class="settings__module-desc">Gérer vos stocks d'ingrédients</p>
+          </div>
+        </div>
+        <button
+          :class="['settings__toggle', { 'settings__toggle--on': localShowInventory }]"
+          :aria-checked="localShowInventory"
+          role="switch"
+          aria-label="Activer le module Inventaire"
+          data-testid="inventory-toggle"
+          @click="localShowInventory = !localShowInventory"
+        >
+          <span class="settings__toggle-thumb" />
+        </button>
+      </KuboCard>
+
+      <!-- Module Courses -->
+      <KuboCard rounded="2xl" class="settings__card settings__card--row">
+        <div class="settings__module-left">
+          <div class="settings__module-icon-wrap">
+            <KuboIcon name="shopping-cart" :size="22" class="settings__card-icon" />
+          </div>
+          <div>
+            <h3 class="settings__module-title">Module Courses</h3>
+            <p class="settings__module-desc">Liste de courses automatique</p>
+          </div>
+        </div>
+        <button
+          :class="['settings__toggle', { 'settings__toggle--on': localShowGroceries }]"
+          :aria-checked="localShowGroceries"
+          role="switch"
+          aria-label="Activer le module Courses"
+          data-testid="groceries-toggle"
+          @click="localShowGroceries = !localShowGroceries"
+        >
+          <span class="settings__toggle-thumb" />
+        </button>
+      </KuboCard>
+
+      <!-- Objectifs -->
       <KuboCard rounded="2xl" class="settings__card">
         <h3 class="settings__card-title">
           <KuboIcon name="user" :size="18" class="settings__card-icon" />
-          Profil Utilisateur
+          Mon foyer
         </h3>
-        <div class="settings__fields">
-          <KuboInput v-model="localName" label="Pseudo" placeholder="Votre prénom" />
-          <KuboInput
-            v-model="localKcal"
-            type="number"
-            label="Objectif Calories"
-            placeholder="2000"
-          />
+        <div class="settings__steppers">
+          <!-- Portions -->
+          <div class="settings__stepper">
+            <span class="settings__stepper-label">Nombre de portions</span>
+            <div class="settings__stepper-ctrl">
+              <button class="settings__stepper-btn" @click="updatePortions(-1)">
+                <KuboIcon name="minus" :size="14" />
+              </button>
+              <span class="settings__stepper-value" data-testid="portions-value">{{
+                portions
+              }}</span>
+              <button class="settings__stepper-btn" @click="updatePortions(1)">
+                <KuboIcon name="plus" :size="14" />
+              </button>
+            </div>
+          </div>
+          <!-- Repas / semaine -->
+          <div class="settings__stepper">
+            <span class="settings__stepper-label">Repas / semaine</span>
+            <div class="settings__stepper-ctrl">
+              <button class="settings__stepper-btn" @click="updateMealsGoal(-1)">
+                <KuboIcon name="minus" :size="14" />
+              </button>
+              <span class="settings__stepper-value" data-testid="meals-goal-value">{{
+                mealsGoal
+              }}</span>
+              <button class="settings__stepper-btn" @click="updateMealsGoal(1)">
+                <KuboIcon name="plus" :size="14" />
+              </button>
+            </div>
+          </div>
         </div>
       </KuboCard>
 
@@ -71,7 +141,6 @@ async function save() {
             <p class="settings__dark-sub">Style &amp; Confort</p>
           </div>
         </div>
-        <!-- Toggle switch -->
         <button
           :class="['settings__toggle', { 'settings__toggle--on': darkMode }]"
           :aria-checked="darkMode"
@@ -89,7 +158,6 @@ async function save() {
       variant="primary"
       size="lg"
       :full-width="true"
-      :loading="saving"
       class="settings__save"
       data-testid="settings-save-btn"
       @click="save"
@@ -149,10 +217,81 @@ async function save() {
   color: var(--kubo-green);
 }
 
-.settings__fields {
+/* Module cards */
+.settings__module-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.settings__module-icon-wrap {
+  width: 48px;
+  height: 48px;
+  background: var(--kubo-green-light);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--kubo-green);
+}
+.settings__module-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--kubo-text);
+}
+.settings__module-desc {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--kubo-text-muted);
+  margin-top: 2px;
+}
+
+/* Steppers */
+.settings__steppers {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+.settings__stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--kubo-surface-mute);
+  border-radius: var(--radius-lg);
+}
+.settings__stepper-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kubo-text);
+}
+.settings__stepper-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.settings__stepper-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--kubo-border);
+  background: var(--kubo-surface);
+  border-radius: var(--radius-sm);
+  color: var(--kubo-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+.settings__stepper-btn:hover {
+  border-color: var(--kubo-green);
+  color: var(--kubo-green);
+}
+.settings__stepper-value {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--kubo-text);
+  min-width: 24px;
+  text-align: center;
 }
 
 /* Dark toggle */

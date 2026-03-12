@@ -1,6 +1,6 @@
 /**
  * useApp — Composable central de l'application Kubo
- * Gère la navigation, le planning, les filtres et le dark mode.
+ * Gère la navigation, le planning, les filtres, l'inventaire et le dark mode.
  */
 import { ref, reactive, computed } from 'vue'
 import { apiService } from '@/services/api.js'
@@ -16,6 +16,14 @@ const loading = ref(true)
 
 const weeklyData = reactive({})
 const currentDate = ref(new Date())
+
+// Nouveaux singletons v2
+const inventory = ref([])
+const viewMode = ref('week')
+const portions = ref(2)
+const mealsGoal = ref(5)
+const showInventory = ref(true)
+const showGroceries = ref(true)
 
 const filters = reactive({
   category: 'Tout',
@@ -83,19 +91,54 @@ export function useApp() {
     setDarkMode(!darkMode.value)
   }
 
-  // ---- Semaine ----
+  // ---- Période (remplace changeWeek) ----
   const weekRange = computed(() => getWeekRange(currentDate.value))
 
-  function changeWeek(delta) {
+  const periodLabel = computed(() => {
+    const tab = currentView.value
+    const mode = ['catalog', 'planning', 'groceries', 'inventory'].includes(tab)
+      ? 'week'
+      : viewMode.value
+    if (mode === 'week') return getWeekRange(currentDate.value)
+    if (mode === 'month')
+      return currentDate.value.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    return String(currentDate.value.getFullYear())
+  })
+
+  function changePeriod(delta) {
+    const tab = currentView.value
+    const mode = ['catalog', 'planning', 'groceries', 'inventory'].includes(tab)
+      ? 'week'
+      : viewMode.value
     const d = new Date(currentDate.value)
-    d.setDate(d.getDate() + delta * 7)
+    if (mode === 'week') d.setDate(d.getDate() + delta * 7)
+    else if (mode === 'month') d.setMonth(d.getMonth() + delta)
+    else d.setFullYear(d.getFullYear() + delta)
     currentDate.value = d
   }
+
+  // Compat legacy
+  function changeWeek(delta) {
+    changePeriod(delta)
+  }
+
+  function switchViewMode(mode) {
+    viewMode.value = mode
+  }
+
+  // ---- Prix calculé par recette ----
+  function getRecipePrice(recipe) {
+    return recipe.ingredients.reduce((acc, ing) => acc + ((ing.price || 0) / 2) * portions.value, 0)
+  }
+
+  const recipesWithPrice = computed(() =>
+    recipes.value.map((r) => ({ ...r, totalPrice: getRecipePrice(r) })),
+  )
 
   // ---- Planning ----
   const selectedRecipes = computed(() => {
     const entries = getWeekEntries()
-    return recipes.value.filter((r) => entries[r.id]?.selected)
+    return recipesWithPrice.value.filter((r) => entries[r.id]?.selected)
   })
 
   const doneRecipes = computed(() =>
@@ -103,9 +146,31 @@ export function useApp() {
   )
 
   const progressPercent = computed(() => {
-    const s = selectedRecipes.value.length
-    if (!s) return 0
-    return Math.round((doneRecipes.value.length / s) * 100)
+    if (currentView.value === 'groceries') {
+      const totalIngs = selectedRecipes.value.flatMap((r) => r.ingredients).length
+      if (!totalIngs) return 0
+      const checked = selectedRecipes.value
+        .flatMap((r) => r.ingredients)
+        .filter((i) => inventory.value.find((inv) => inv.name === i.name)).length
+      return Math.round((checked / totalIngs) * 100)
+    }
+    if (!mealsGoal.value) return 0
+    return Math.min(100, Math.round((doneRecipes.value.length / mealsGoal.value) * 100))
+  })
+
+  const progressLabel = computed(() => {
+    return currentView.value === 'groceries' ? 'Panier' : 'Objectif'
+  })
+
+  const progressText = computed(() => {
+    if (currentView.value === 'groceries') {
+      const totalIngs = selectedRecipes.value.flatMap((r) => r.ingredients).length
+      const checked = selectedRecipes.value
+        .flatMap((r) => r.ingredients)
+        .filter((i) => inventory.value.find((inv) => inv.name === i.name)).length
+      return `${checked}/${totalIngs}`
+    }
+    return `${doneRecipes.value.length}/${mealsGoal.value}`
   })
 
   function toggleRecipe(id) {
@@ -119,6 +184,16 @@ export function useApp() {
     const entries = getWeekEntries()
     if (entries[id]) {
       entries[id].done = !entries[id].done
+      // Quand cuisiné, on consomme les ingrédients de l'inventaire
+      if (entries[id].done) {
+        const recipe = recipesWithPrice.value.find((r) => r.id === id)
+        if (recipe) {
+          recipe.ingredients.forEach((ing) => {
+            inventory.value = inventory.value.filter((item) => item.name !== ing.name)
+          })
+          notify('Consommé ! Stock mis à jour.')
+        }
+      }
     }
   }
 
@@ -131,17 +206,65 @@ export function useApp() {
   }
 
   function clearPlanning() {
-    const entries = getWeekEntries()
-    Object.keys(entries).forEach((id) => {
-      entries[id].selected = false
-      entries[id].done = false
-    })
+    const key = weekKey.value
+    weeklyData[key] = {}
     notify('Semaine réinitialisée')
   }
 
+  // ---- Inventaire ----
+  function updateInventory(ingredient, isAdding) {
+    if (isAdding) {
+      if (!inventory.value.find((i) => i.name === ingredient.name)) {
+        inventory.value = [...inventory.value, { ...ingredient }]
+      }
+    } else {
+      inventory.value = inventory.value.filter((i) => i.name !== ingredient.name)
+    }
+  }
+
+  function toggleRecipeIngredients(id) {
+    const recipe = recipesWithPrice.value.find((r) => r.id === id)
+    if (!recipe) return
+    const allInStock = recipe.ingredients.every((ing) =>
+      inventory.value.find((inv) => inv.name === ing.name),
+    )
+    if (allInStock) {
+      recipe.ingredients.forEach((ing) => {
+        inventory.value = inventory.value.filter((inv) => inv.name !== ing.name)
+      })
+    } else {
+      recipe.ingredients.forEach((ing) => {
+        if (!inventory.value.find((inv) => inv.name === ing.name)) {
+          inventory.value = [...inventory.value, { ...ing }]
+        }
+      })
+    }
+  }
+
+  function isInInventory(name) {
+    return !!inventory.value.find((i) => i.name === name)
+  }
+
+  // ---- Paramètres ----
+  function updatePortions(delta) {
+    portions.value = Math.max(1, portions.value + delta)
+  }
+
+  function updateMealsGoal(delta) {
+    mealsGoal.value = Math.max(1, mealsGoal.value + delta)
+  }
+
+  // ---- Budget ----
+  const totalPrice = computed(() => selectedRecipes.value.reduce((acc, r) => acc + r.totalPrice, 0))
+
+  const avgPrice = computed(() => {
+    if (!selectedRecipes.value.length) return 0
+    return totalPrice.value / selectedRecipes.value.length
+  })
+
   // ---- Filtres ----
   const filteredRecipes = computed(() => {
-    return recipes.value.filter((r) => {
+    return recipesWithPrice.value.filter((r) => {
       const mCat = filters.category === 'Tout' || r.cat === filters.category
       const mTime = filters.maxTime === 0 || r.time <= filters.maxTime
       const mTags =
@@ -182,6 +305,9 @@ export function useApp() {
 
   // ---- Nutrition ----
   const nutritionTotals = computed(() => {
+    if (!selectedRecipes.value.length) {
+      return { prot: 30, fat: 30, carb: 40 }
+    }
     return selectedRecipes.value.reduce(
       (acc, r) => ({ prot: acc.prot + r.prot, fat: acc.fat + r.fat, carb: acc.carb + r.carb }),
       { prot: 0, fat: 0, carb: 0 },
@@ -229,23 +355,37 @@ export function useApp() {
     filters,
     toastMessage,
     toastVisible,
+    inventory,
+    viewMode,
+    portions,
+    mealsGoal,
+    showInventory,
+    showGroceries,
 
     // Computed
     weekRange,
     weekKey,
+    periodLabel,
     selectedRecipes,
     doneRecipes,
     progressPercent,
+    progressLabel,
+    progressText,
     filteredRecipes,
     allCategories,
     allTags,
     nutritionTotals,
+    totalPrice,
+    avgPrice,
+    recipesWithPrice,
 
     // Actions
     navTo,
     toggleSidebar,
     toggleDarkMode,
     changeWeek,
+    changePeriod,
+    switchViewMode,
     toggleRecipe,
     markAsDone,
     isSelected,
@@ -258,5 +398,11 @@ export function useApp() {
     resetFilters,
     notify,
     init,
+    updateInventory,
+    toggleRecipeIngredients,
+    isInInventory,
+    updatePortions,
+    updateMealsGoal,
+    getRecipePrice,
   }
 }

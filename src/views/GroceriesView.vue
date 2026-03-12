@@ -1,32 +1,40 @@
 <script setup>
 /**
- * GroceriesView — Vue liste de courses
+ * GroceriesView — Vue liste de courses avec total prix
  */
-import KuboCard from '@/components/ui/KuboCard.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import GroceryGroup from '@/components/shopping/GroceryGroup.vue'
 import { useApp } from '@/composables/useApp.js'
 
-const { selectedRecipes, isDone } = useApp()
+const { selectedRecipes, isDone, totalPrice } = useApp()
 </script>
 
 <template>
   <div class="groceries fade-in" data-testid="groceries-view">
     <header class="groceries__header">
-      <h1 class="groceries__title">Courses</h1>
-      <p class="groceries__sub">Ingrédients générés depuis votre menu.</p>
+      <div>
+        <h1 class="groceries__title">Courses</h1>
+        <p class="groceries__sub">Ingrédients générés depuis votre menu.</p>
+      </div>
+      <div v-if="selectedRecipes.length" class="groceries__total-card">
+        <KuboIcon name="banknote" :size="18" class="groceries__total-icon" />
+        <div>
+          <p class="groceries__total-label">Total estimé</p>
+          <p class="groceries__total-price" data-testid="groceries-total-price">
+            {{ totalPrice.toFixed(2) }} €
+          </p>
+        </div>
+      </div>
     </header>
 
-    <KuboCard v-if="selectedRecipes.length" rounded="3xl" class="groceries__card">
-      <div class="groceries__list">
-        <GroceryGroup
-          v-for="recipe in selectedRecipes"
-          :key="recipe.id"
-          :recipe="recipe"
-          :done="isDone(recipe.id)"
-        />
-      </div>
-    </KuboCard>
+    <div v-if="selectedRecipes.length" class="groceries__list">
+      <GroceryGroup
+        v-for="recipe in selectedRecipes"
+        :key="recipe.id"
+        :recipe="recipe"
+        :done="isDone(recipe.id)"
+      />
+    </div>
 
     <div v-else class="groceries__empty">
       <KuboIcon name="shopping-cart" :size="48" />
@@ -39,7 +47,7 @@ const { selectedRecipes, isDone } = useApp()
 <style scoped>
 .groceries {
   padding: 48px;
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
 }
 @media (max-width: 768px) {
@@ -49,6 +57,11 @@ const { selectedRecipes, isDone } = useApp()
 }
 
 .groceries__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: 32px;
 }
 .groceries__title {
@@ -64,13 +77,37 @@ const { selectedRecipes, isDone } = useApp()
   margin-top: 4px;
 }
 
-.groceries__card {
-  padding: 36px !important;
+.groceries__total-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: var(--kubo-surface);
+  border: 1px solid var(--kubo-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
 }
+.groceries__total-icon {
+  color: var(--kubo-green);
+}
+.groceries__total-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--kubo-text-muted);
+}
+.groceries__total-price {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--kubo-text);
+}
+
 .groceries__list {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
+  padding-bottom: 48px;
 }
 
 .groceries__empty {

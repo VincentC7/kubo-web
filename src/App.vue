@@ -7,6 +7,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import CatalogView from '@/views/CatalogView.vue'
 import PlanningView from '@/views/PlanningView.vue'
 import GroceriesView from '@/views/GroceriesView.vue'
+import InventoryView from '@/views/InventoryView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import { useApp } from '@/composables/useApp.js'
 
@@ -37,6 +38,7 @@ onMounted(() => init())
           <CatalogView v-else-if="currentView === 'catalog'" key="catalog" />
           <PlanningView v-else-if="currentView === 'planning'" key="planning" />
           <GroceriesView v-else-if="currentView === 'groceries'" key="groceries" />
+          <InventoryView v-else-if="currentView === 'inventory'" key="inventory" />
           <SettingsView v-else-if="currentView === 'settings'" key="settings" />
         </Transition>
       </main>

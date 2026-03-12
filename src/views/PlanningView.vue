@@ -3,14 +3,12 @@
  * PlanningView — Vue menu hebdomadaire
  */
 import { ref } from 'vue'
-import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import PlanningCard from '@/components/planning/PlanningCard.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
 import { useApp } from '@/composables/useApp.js'
 
-const { selectedRecipes, isDone, isSelected, markAsDone, toggleRecipe, clearPlanning, notify } =
-  useApp()
+const { selectedRecipes, isDone, isSelected, markAsDone, toggleRecipe, notify } = useApp()
 
 const detailRecipe = ref(null)
 
@@ -37,15 +35,6 @@ function handleModalToggle() {
         <h1 class="planning__title">Menu Hebdo</h1>
         <p class="planning__sub">Votre sélection personnalisée.</p>
       </div>
-      <KuboButton
-        variant="danger"
-        size="sm"
-        data-testid="planning-reset-btn"
-        @click="clearPlanning"
-      >
-        <KuboIcon name="rotate-ccw" :size="14" />
-        Reset semaine
-      </KuboButton>
     </header>
 
     <!-- Grid -->

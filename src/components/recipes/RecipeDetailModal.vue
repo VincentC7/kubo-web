@@ -53,15 +53,23 @@ const macroTotal = computed(() => {
               <div class="rdm__stats">
                 <div class="rdm__stat">
                   <KuboIcon name="flame" :size="16" class="rdm__stat-icon rdm__stat-icon--green" />
-                  <span>{{ recipe.kcal }} kcal</span>
+                  <span>{{ recipe.kcal }} k</span>
                 </div>
                 <div class="rdm__stat">
                   <KuboIcon name="clock" :size="16" class="rdm__stat-icon" />
-                  <span>{{ recipe.time }} min</span>
+                  <span>{{ recipe.time }} m</span>
                 </div>
                 <div class="rdm__stat">
                   <KuboIcon name="chef-hat" :size="16" class="rdm__stat-icon" />
                   <span>{{ recipe.difficulty }}</span>
+                </div>
+                <div class="rdm__stat">
+                  <KuboIcon
+                    name="banknote"
+                    :size="16"
+                    class="rdm__stat-icon rdm__stat-icon--amber"
+                  />
+                  <span>{{ recipe.totalPrice?.toFixed(2) }} €</span>
                 </div>
               </div>
 
@@ -82,11 +90,13 @@ const macroTotal = computed(() => {
                   Ingrédients
                 </h3>
                 <div class="rdm__ingredients">
-                  <label v-for="ing in recipe.ingredients" :key="ing.name" class="rdm__ingredient">
-                    <input type="checkbox" class="rdm__ing-check" />
+                  <div v-for="ing in recipe.ingredients" :key="ing.name" class="rdm__ingredient">
+                    <div class="rdm__ing-icon">
+                      <KuboIcon name="package" :size="16" />
+                    </div>
                     <span class="rdm__ing-name">{{ ing.name }}</span>
                     <span v-if="ing.qty" class="rdm__ing-qty">{{ ing.qty }}</span>
-                  </label>
+                  </div>
                 </div>
               </section>
 
@@ -113,7 +123,7 @@ const macroTotal = computed(() => {
                   data-testid="modal-toggle-btn"
                   @click="$emit('toggle')"
                 >
-                  {{ selected ? 'Retirer du menu' : 'Ajouter à ma semaine' }}
+                  {{ selected ? 'Retirer' : 'Ajouter' }}
                 </KuboButton>
               </div>
             </div>
@@ -226,7 +236,7 @@ const macroTotal = computed(() => {
 /* Stats */
 .rdm__stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 .rdm__stat {
@@ -247,6 +257,9 @@ const macroTotal = computed(() => {
 }
 .rdm__stat-icon--green {
   color: var(--kubo-green);
+}
+.rdm__stat-icon--amber {
+  color: #d97706;
 }
 
 /* Macros */
@@ -309,17 +322,20 @@ const macroTotal = computed(() => {
   background: var(--kubo-surface-mute);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
-  cursor: pointer;
   transition: border-color var(--transition-base);
 }
 .rdm__ingredient:hover {
   border-color: var(--kubo-border-mid);
 }
-.rdm__ing-check {
-  accent-color: var(--kubo-green);
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
+.rdm__ing-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  background: var(--kubo-green-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--kubo-green);
   flex-shrink: 0;
 }
 .rdm__ing-name {
@@ -331,7 +347,10 @@ const macroTotal = computed(() => {
 .rdm__ing-qty {
   font-size: 10px;
   font-weight: 800;
-  color: var(--kubo-text-muted);
+  color: var(--kubo-green);
+  background: var(--kubo-green-light);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
   white-space: nowrap;
 }
 

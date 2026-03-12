@@ -4,16 +4,17 @@
  */
 const TAG_COLORS = {
   Bio: 'green',
-  Végé: 'green',
+  Vege: 'green',
   Frais: 'green',
-  Épicé: 'red',
+  Epice: 'red',
   Gourmand: 'red',
-  Gratiné: 'red',
-  Protéines: 'blue',
+  Gratine: 'red',
+  Proteines: 'blue',
   AOP: 'blue',
   Gourmet: 'purple',
   Express: 'orange',
-  Léger: 'default',
+  Nouveau: 'pink',
+  Leger: 'default',
   Crunchy: 'default',
   Noix: 'default',
 }
@@ -65,6 +66,10 @@ const colorClass = props.color
 }
 .kubo-tag--default {
   background: #64748b;
+  color: #fff;
+}
+.kubo-tag--pink {
+  background: #db2777;
   color: #fff;
 }
 </style>

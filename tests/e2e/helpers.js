@@ -14,7 +14,7 @@ export async function waitForAppReady(page) {
 /**
  * Navigue vers une vue via la sidebar
  * @param {import('@playwright/test').Page} page
- * @param {'dashboard'|'catalog'|'planning'|'groceries'|'settings'} view
+ * @param {'dashboard'|'catalog'|'planning'|'groceries'|'inventory'|'settings'} view
  */
 export async function navigateTo(page, view) {
   await page.getByTestId(`nav-${view}`).click()

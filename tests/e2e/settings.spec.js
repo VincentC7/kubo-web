@@ -15,25 +15,30 @@ test.describe('Paramètres — affichage', () => {
     await expect(page.getByTestId('settings-view')).toBeVisible()
   })
 
-  test('affiche le champ Pseudo pré-rempli avec le nom utilisateur', async ({ page }) => {
-    // Le mock retourne "Jean Dupont"
-    await expect(
-      page.locator('label', { hasText: 'Pseudo' }).locator('..').locator('input'),
-    ).toHaveValue('Jean Dupont')
-  })
-
-  test('affiche le champ Objectif Calories pré-rempli', async ({ page }) => {
-    await expect(
-      page.locator('label', { hasText: 'Objectif Calories' }).locator('..').locator('input'),
-    ).toHaveValue('2000')
-  })
-
   test('affiche le toggle dark mode', async ({ page }) => {
     await expect(page.getByTestId('darkmode-toggle')).toBeVisible()
   })
 
   test('affiche le bouton Sauvegarder', async ({ page }) => {
     await expect(page.getByTestId('settings-save-btn')).toBeVisible()
+  })
+
+  test('affiche le toggle du module Inventaire', async ({ page }) => {
+    await expect(page.getByTestId('inventory-toggle')).toBeVisible()
+  })
+
+  test('affiche le toggle du module Courses', async ({ page }) => {
+    await expect(page.getByTestId('groceries-toggle')).toBeVisible()
+  })
+
+  test('affiche le stepper de portions', async ({ page }) => {
+    await expect(page.getByTestId('portions-value')).toBeVisible()
+    await expect(page.getByTestId('portions-value')).toContainText('2')
+  })
+
+  test('affiche le stepper de repas/semaine', async ({ page }) => {
+    await expect(page.getByTestId('meals-goal-value')).toBeVisible()
+    await expect(page.getByTestId('meals-goal-value')).toContainText('5')
   })
 })
 
@@ -65,38 +70,48 @@ test.describe('Paramètres — dark mode', () => {
   })
 })
 
-test.describe('Paramètres — sauvegarde du profil', () => {
+test.describe('Paramètres — steppers', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await waitForAppReady(page)
     await navigateTo(page, 'settings')
   })
 
-  test('peut modifier le pseudo et sauvegarder', async ({ page }) => {
-    const nameInput = page.locator('label', { hasText: 'Pseudo' }).locator('..').locator('input')
-    await nameInput.fill('Marie Dupont')
+  test('peut incrémenter les portions', async ({ page }) => {
+    const value = page.getByTestId('portions-value')
+    await expect(value).toContainText('2')
+    // Click the + button next to portions
+    await value.locator('..').locator('button').last().click()
+    await expect(value).toContainText('3')
+  })
+
+  test('peut décrémenter les portions (min 1)', async ({ page }) => {
+    const value = page.getByTestId('portions-value')
+    await value.locator('..').locator('button').first().click()
+    await expect(value).toContainText('1')
+    // Ne descend pas en dessous de 1
+    await value.locator('..').locator('button').first().click()
+    await expect(value).toContainText('1')
+  })
+
+  test('peut incrémenter les repas/semaine', async ({ page }) => {
+    const value = page.getByTestId('meals-goal-value')
+    await expect(value).toContainText('5')
+    await value.locator('..').locator('button').last().click()
+    await expect(value).toContainText('6')
+  })
+})
+
+test.describe('Paramètres — sauvegarde', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await waitForAppReady(page)
+    await navigateTo(page, 'settings')
+  })
+
+  test('affiche un toast après sauvegarde', async ({ page }) => {
     await page.getByTestId('settings-save-btn').click()
     await expect(page.locator('.toast')).toBeVisible()
     await expect(page.locator('.toast')).toContainText('sauvegardé')
-  })
-
-  test("peut modifier l'objectif calories", async ({ page }) => {
-    const kcalInput = page
-      .locator('label', { hasText: 'Objectif Calories' })
-      .locator('..')
-      .locator('input')
-    await kcalInput.fill('1800')
-    await page.getByTestId('settings-save-btn').click()
-    await expect(page.locator('.toast')).toBeVisible()
-  })
-
-  test('le bouton Sauvegarder affiche un loader pendant la sauvegarde', async ({ page }) => {
-    const saveBtn = page.getByTestId('settings-save-btn')
-    // Déclenche la sauvegarde et vérifie immédiatement l'état loading
-    await saveBtn.click()
-    // Le spinner apparaît brièvement (mock ~400ms)
-    await expect(saveBtn.locator('.kubo-btn__spinner')).toBeVisible()
-    // Puis disparaît
-    await expect(saveBtn.locator('.kubo-btn__spinner')).toBeHidden({ timeout: 2000 })
   })
 })

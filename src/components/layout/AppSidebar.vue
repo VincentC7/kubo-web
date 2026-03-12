@@ -5,7 +5,7 @@
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { useApp } from '@/composables/useApp.js'
 
-const { currentView, navTo, sidebarCollapsed, toggleSidebar, darkMode, toggleDarkMode, user } =
+const { currentView, navTo, sidebarCollapsed, toggleSidebar, user, showInventory, showGroceries } =
   useApp()
 
 const NAV_ITEMS = [
@@ -13,7 +13,14 @@ const NAV_ITEMS = [
   { id: 'catalog', label: 'Recettes', icon: 'utensils' },
   { id: 'planning', label: 'Menu Hebdo', icon: 'calendar' },
   { id: 'groceries', label: 'Courses', icon: 'shopping-cart' },
+  { id: 'inventory', label: 'Inventaire', icon: 'box' },
 ]
+
+function isNavVisible(item) {
+  if (item.id === 'inventory') return showInventory.value
+  if (item.id === 'groceries') return showGroceries.value
+  return true
+}
 </script>
 
 <template>
@@ -40,6 +47,7 @@ const NAV_ITEMS = [
     <nav class="sidebar__nav" data-testid="sidebar-nav">
       <button
         v-for="item in NAV_ITEMS"
+        v-show="isNavVisible(item)"
         :key="item.id"
         :class="['sidebar__item', { 'sidebar__item--active': currentView === item.id }]"
         :title="sidebarCollapsed ? item.label : undefined"

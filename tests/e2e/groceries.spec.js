@@ -29,7 +29,7 @@ test.describe('Courses — avec recettes', () => {
   })
 
   test("affiche la liste de courses après ajout d'une recette", async ({ page }) => {
-    await expect(page.locator('.groceries__card')).toBeVisible()
+    await expect(page.locator('.groceries__list')).toBeVisible()
   })
 
   test("affiche au moins un groupe d'ingrédients", async ({ page }) => {
@@ -42,9 +42,8 @@ test.describe('Courses — avec recettes', () => {
   })
 
   test('affiche les ingrédients de la recette', async ({ page }) => {
-    // Les classes sont scopées par Vue — on cible les labels dans la grille
-    const items = page.locator('.gg__grid label')
-    const count = await items.count()
-    expect(count).toBeGreaterThan(0)
+    // On cible les labels (checkbox + nom d'ingrédient) dans les groupes
+    const items = page.locator('.gg label')
+    await expect(items.first()).toBeVisible()
   })
 })

@@ -1,9 +1,19 @@
 <script setup>
 /**
- * DashboardView — Vue tableau de bord nutritionnel
+ * DashboardView — Vue tableau de bord nutritionnel + budget
  */
 import { ref, computed, watch, onMounted } from 'vue'
-import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js'
+import {
+  Chart,
+  DoughnutController,
+  ArcElement,
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from 'chart.js'
 import KuboCard from '@/components/ui/KuboCard.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
@@ -11,13 +21,28 @@ import KuboProgressBar from '@/components/ui/KuboProgressBar.vue'
 import NutritionLegendItem from '@/components/recipes/NutritionLegendItem.vue'
 import { useApp } from '@/composables/useApp.js'
 
-const { selectedRecipes, doneRecipes, progressPercent, nutritionTotals, navTo, isDone } = useApp()
+const {
+  selectedRecipes,
+  doneRecipes,
+  mealsGoal,
+  nutritionTotals,
+  navTo,
+  isDone,
+  viewMode,
+  switchViewMode,
+  totalPrice,
+  avgPrice,
+} = useApp()
 
 const hasData = computed(() => selectedRecipes.value.length > 0)
 
-// Chart.js — chargé dynamiquement
+// Chart.js — Nutrition
 const chartCanvas = ref(null)
 let chartInstance = null
+
+// Chart.js — Budget
+const budgetCanvas = ref(null)
+let budgetChartInstance = null
 
 const macroSum = computed(
   () => nutritionTotals.value.prot + nutritionTotals.value.fat + nutritionTotals.value.carb || 1,
@@ -26,10 +51,24 @@ const protPct = computed(() => Math.round((nutritionTotals.value.prot / macroSum
 const fatPct = computed(() => Math.round((nutritionTotals.value.fat / macroSum.value) * 100))
 const carbPct = computed(() => Math.round((nutritionTotals.value.carb / macroSum.value) * 100))
 
-Chart.register(DoughnutController, ArcElement, Tooltip, Legend)
+const dashProgress = computed(() => {
+  if (!mealsGoal.value) return 0
+  return Math.min(100, Math.round((doneRecipes.value.length / mealsGoal.value) * 100))
+})
+
+Chart.register(
+  DoughnutController,
+  ArcElement,
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+)
 
 async function renderChart() {
-  if (!chartCanvas.value || !hasData.value) return
+  if (!chartCanvas.value) return
   if (chartInstance) {
     chartInstance.destroy()
     chartInstance = null
@@ -56,103 +95,234 @@ async function renderChart() {
   })
 }
 
+function getBudgetData() {
+  if (viewMode.value === 'week') {
+    return {
+      labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+      data: [12, 19, 3, 5, 2, 3, 7],
+      thickness: 30,
+    }
+  }
+  if (viewMode.value === 'month') {
+    return { labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'], data: [85, 120, 95, 110], thickness: 30 }
+  }
+  return {
+    labels: [
+      'Jan',
+      'Fév',
+      'Mar',
+      'Avr',
+      'Mai',
+      'Juin',
+      'Juil',
+      'Août',
+      'Sept',
+      'Oct',
+      'Nov',
+      'Déc',
+    ],
+    data: [450, 480, 520, 410, 390, 510, 600, 580, 420, 410, 380, 550],
+    thickness: 12,
+  }
+}
+
+function renderBudgetChart() {
+  if (!budgetCanvas.value) return
+  if (budgetChartInstance) {
+    budgetChartInstance.destroy()
+    budgetChartInstance = null
+  }
+  const { labels, data, thickness } = getBudgetData()
+  budgetChartInstance = new Chart(budgetCanvas.value, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Budget (€)',
+          data,
+          backgroundColor: '#00A35E',
+          borderRadius: 8,
+          barThickness: thickness,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { display: false },
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10, weight: 'bold' }, color: '#94a3b8' },
+        },
+      },
+      plugins: { legend: { display: false } },
+    },
+  })
+}
+
 watch(
   [selectedRecipes, nutritionTotals],
   () => {
-    if (hasData.value) renderChart()
+    renderChart()
   },
   { deep: true },
 )
+
+watch(viewMode, () => {
+  renderBudgetChart()
+})
+
 onMounted(() => {
-  if (hasData.value) renderChart()
+  renderChart()
+  renderBudgetChart()
 })
 </script>
 
 <template>
   <div class="dashboard fade-in" data-testid="dashboard-view">
     <header class="dashboard__header">
-      <h1 class="dashboard__title">Synthèse</h1>
-      <p class="dashboard__sub">Votre équilibre culinaire hebdomadaire.</p>
+      <div>
+        <h1 class="dashboard__title">Synthèse</h1>
+        <p class="dashboard__sub">Votre équilibre culinaire hebdomadaire.</p>
+      </div>
+      <!-- View mode toggle -->
+      <div class="dashboard__view-modes">
+        <button
+          v-for="mode in ['week', 'month', 'year']"
+          :key="mode"
+          :class="['dashboard__view-btn', { 'dashboard__view-btn--active': viewMode === mode }]"
+          @click="switchViewMode(mode)"
+        >
+          {{ mode === 'week' ? 'Semaine' : mode === 'month' ? 'Mois' : 'Année' }}
+        </button>
+      </div>
     </header>
 
     <!-- Empty state -->
-    <div v-if="!hasData" class="dashboard__empty">
+    <div v-if="!hasData && viewMode === 'week'" class="dashboard__empty">
       <div class="dashboard__empty-icon">
         <KuboIcon name="chef-hat" :size="56" />
         <div class="dashboard__empty-icon-badge">
           <KuboIcon name="plus" :size="18" />
         </div>
       </div>
-      <h2 class="dashboard__empty-title">Votre semaine est vide</h2>
+      <h2 class="dashboard__empty-title">Pas assez de données</h2>
       <p class="dashboard__empty-desc">
         Commencez par explorer le catalogue pour planifier vos repas et analyser vos besoins.
       </p>
       <KuboButton variant="primary" size="lg" @click="navTo('catalog')">
         <KuboIcon name="search" :size="18" />
-        Explorer le catalogue
+        Parcourir les recettes
       </KuboButton>
     </div>
 
     <!-- Main content -->
     <div v-else class="dashboard__grid">
-      <!-- Chart card -->
-      <KuboCard rounded="3xl" class="dashboard__chart-card">
-        <h2 class="dashboard__card-title">
-          <span class="dashboard__dot" />
-          Répartition Nutritionnelle
-        </h2>
-        <div class="dashboard__chart-body">
-          <div class="dashboard__chart-wrap">
-            <canvas ref="chartCanvas" />
+      <!-- Left column -->
+      <div class="dashboard__left">
+        <!-- Chart card — Nutrition -->
+        <KuboCard rounded="3xl" class="dashboard__chart-card">
+          <h2 class="dashboard__card-title">
+            <span class="dashboard__dot" />
+            Répartition Nutritionnelle
+          </h2>
+          <div class="dashboard__chart-body">
+            <div class="dashboard__chart-wrap">
+              <canvas ref="chartCanvas" />
+            </div>
+            <div class="dashboard__legend">
+              <NutritionLegendItem
+                label="Protéines"
+                :percent="protPct"
+                :grams="nutritionTotals.prot"
+                icon="dna"
+                color="#3B82F6"
+              />
+              <NutritionLegendItem
+                label="Lipides"
+                :percent="fatPct"
+                :grams="nutritionTotals.fat"
+                icon="droplets"
+                color="#F97316"
+              />
+              <NutritionLegendItem
+                label="Glucides"
+                :percent="carbPct"
+                :grams="nutritionTotals.carb"
+                icon="wheat"
+                color="#10B981"
+              />
+            </div>
           </div>
-          <div class="dashboard__legend">
-            <NutritionLegendItem
-              label="Protéines"
-              :percent="protPct"
-              :grams="nutritionTotals.prot"
-              icon="dna"
-              color="#3B82F6"
-            />
-            <NutritionLegendItem
-              label="Lipides"
-              :percent="fatPct"
-              :grams="nutritionTotals.fat"
-              icon="droplets"
-              color="#F97316"
-            />
-            <NutritionLegendItem
-              label="Glucides"
-              :percent="carbPct"
-              :grams="nutritionTotals.carb"
-              icon="wheat"
-              color="#10B981"
-            />
-          </div>
-        </div>
-      </KuboCard>
+        </KuboCard>
 
-      <!-- Progress card -->
-      <KuboCard rounded="2xl" :dark="true" class="dashboard__progress-card">
-        <p class="dashboard__prog-label">Progression</p>
-        <h3 class="dashboard__prog-count">
-          {{ doneRecipes.length }} / {{ selectedRecipes.length }} cuisinés
-        </h3>
-        <KuboProgressBar :value="progressPercent" color="emerald" />
-
-        <div class="dashboard__dish-list-label">Plats de la semaine</div>
-        <div class="dashboard__dish-list custom-scrollbar">
-          <div v-for="recipe in selectedRecipes" :key="recipe.id" class="dashboard__dish-item">
-            <span
-              :class="['dashboard__dish-dot', { 'dashboard__dish-dot--done': isDone(recipe.id) }]"
-            />
-            <span
-              :class="['dashboard__dish-name', { 'dashboard__dish-name--done': isDone(recipe.id) }]"
-            >
-              {{ recipe.title }}
-            </span>
+        <!-- Budget chart -->
+        <KuboCard rounded="3xl" class="dashboard__budget-card">
+          <h2 class="dashboard__card-title">
+            <span class="dashboard__dot" />
+            Évolution du Budget
+          </h2>
+          <div class="dashboard__budget-chart-wrap">
+            <canvas ref="budgetCanvas" />
           </div>
-        </div>
-      </KuboCard>
+        </KuboCard>
+      </div>
+
+      <!-- Right column -->
+      <div class="dashboard__right-col">
+        <!-- Total period card (dark) -->
+        <KuboCard rounded="2xl" :dark="true" class="dashboard__progress-card">
+          <p class="dashboard__prog-label">Total Période</p>
+          <h3 class="dashboard__prog-count" data-testid="dash-total-price">
+            {{ totalPrice.toFixed(2) }} €
+          </h3>
+
+          <div class="dashboard__stats-row">
+            <div class="dashboard__stat-mini">
+              <span class="dashboard__stat-mini-label">Moy. / repas</span>
+              <span class="dashboard__stat-mini-value">{{ avgPrice.toFixed(2) }} €</span>
+            </div>
+            <div class="dashboard__stat-mini">
+              <span class="dashboard__stat-mini-label">Progression</span>
+              <span class="dashboard__stat-mini-value"
+                >{{ doneRecipes.length }} / {{ mealsGoal }} fait</span
+              >
+            </div>
+          </div>
+
+          <KuboProgressBar :value="dashProgress" color="emerald" />
+        </KuboCard>
+
+        <!-- Week details (only in week mode) -->
+        <KuboCard
+          v-if="viewMode === 'week'"
+          rounded="2xl"
+          :dark="true"
+          class="dashboard__week-card"
+        >
+          <div class="dashboard__dish-list-label">Plats de la semaine</div>
+          <div class="dashboard__dish-list custom-scrollbar">
+            <div v-for="recipe in selectedRecipes" :key="recipe.id" class="dashboard__dish-item">
+              <span
+                :class="['dashboard__dish-dot', { 'dashboard__dish-dot--done': isDone(recipe.id) }]"
+              />
+              <span
+                :class="[
+                  'dashboard__dish-name',
+                  { 'dashboard__dish-name--done': isDone(recipe.id) },
+                ]"
+              >
+                {{ recipe.title }}
+              </span>
+            </div>
+            <div v-if="!selectedRecipes.length" class="dashboard__dish-empty">
+              Aucun plat sélectionné
+            </div>
+          </div>
+        </KuboCard>
+      </div>
     </div>
   </div>
 </template>
@@ -170,6 +340,11 @@ onMounted(() => {
 }
 
 .dashboard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: 40px;
 }
 .dashboard__title {
@@ -184,6 +359,32 @@ onMounted(() => {
   font-style: italic;
   color: var(--kubo-text-muted);
   margin-top: 4px;
+}
+
+/* View mode toggle */
+.dashboard__view-modes {
+  display: flex;
+  gap: 4px;
+  background: var(--kubo-surface-mute);
+  border: 1px solid var(--kubo-border);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+}
+.dashboard__view-btn {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--kubo-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+.dashboard__view-btn--active {
+  background: var(--kubo-surface);
+  color: var(--kubo-green);
+  box-shadow: var(--shadow-card);
 }
 
 /* Empty */
@@ -243,6 +444,17 @@ onMounted(() => {
   }
 }
 
+.dashboard__left {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.dashboard__right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 /* Chart card */
 .dashboard__chart-card {
   padding: 36px !important;
@@ -292,6 +504,15 @@ onMounted(() => {
   width: 100%;
 }
 
+/* Budget card */
+.dashboard__budget-card {
+  padding: 36px !important;
+}
+.dashboard__budget-chart-wrap {
+  height: 200px;
+  position: relative;
+}
+
 /* Progress card */
 .dashboard__progress-card {
   padding: 32px !important;
@@ -307,9 +528,40 @@ onMounted(() => {
   color: #34d399;
 }
 .dashboard__prog-count {
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 900;
   color: #fff;
+}
+
+.dashboard__stats-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.dashboard__stat-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dashboard__stat-mini-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #475569;
+}
+.dashboard__stat-mini-value {
+  font-size: 13px;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+/* Week details card */
+.dashboard__week-card {
+  padding: 24px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .dashboard__dish-list-label {
   font-size: 9px;
@@ -317,7 +569,6 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.16em;
   color: #475569;
-  margin-top: 8px;
 }
 .dashboard__dish-list {
   display: flex;
@@ -351,5 +602,11 @@ onMounted(() => {
 .dashboard__dish-name--done {
   text-decoration: line-through;
   opacity: 0.4;
+}
+.dashboard__dish-empty {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  font-style: italic;
 }
 </style>

@@ -39,9 +39,9 @@ defineEmits(['select', 'toggle'])
             <KuboIcon name="clock" :size="12" />
             {{ recipe.time }}m
           </span>
-          <span class="recipe-card__meta-item">
-            <KuboIcon name="flame" :size="12" />
-            {{ recipe.kcal }}k
+          <span class="recipe-card__meta-item recipe-card__meta-item--price">
+            <KuboIcon name="banknote" :size="12" />
+            {{ recipe.totalPrice?.toFixed(2) }}€
           </span>
         </div>
 
@@ -166,6 +166,9 @@ defineEmits(['select', 'toggle'])
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--kubo-text-muted);
+}
+.recipe-card__meta-item--price {
+  color: #d97706;
 }
 
 .recipe-card__toggle {
