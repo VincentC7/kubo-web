@@ -3,7 +3,7 @@ dist
 .git
 .gitignore
 *.md
-doc
+local
 .vscode
 .idea
 
