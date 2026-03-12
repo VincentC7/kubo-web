@@ -10,14 +10,24 @@ const { weekRange, changeWeek, progressPercent, selectedRecipes, doneRecipes, us
 </script>
 
 <template>
-  <header class="app-header">
+  <header class="app-header" data-testid="app-header">
     <!-- Week selector -->
-    <div class="app-header__week">
-      <button class="app-header__week-btn" title="Semaine précédente" @click="changeWeek(-1)">
+    <div class="app-header__week" data-testid="week-selector">
+      <button
+        class="app-header__week-btn"
+        title="Semaine précédente"
+        data-testid="week-prev"
+        @click="changeWeek(-1)"
+      >
         <KuboIcon name="chevron-left" :size="18" />
       </button>
-      <span class="app-header__week-label">{{ weekRange }}</span>
-      <button class="app-header__week-btn" title="Semaine suivante" @click="changeWeek(1)">
+      <span class="app-header__week-label" data-testid="week-label">{{ weekRange }}</span>
+      <button
+        class="app-header__week-btn"
+        title="Semaine suivante"
+        data-testid="week-next"
+        @click="changeWeek(1)"
+      >
         <KuboIcon name="chevron-right" :size="18" />
       </button>
     </div>

@@ -69,7 +69,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="dashboard fade-in">
+  <div class="dashboard fade-in" data-testid="dashboard-view">
     <header class="dashboard__header">
       <h1 class="dashboard__title">Synthèse</h1>
       <p class="dashboard__sub">Votre équilibre culinaire hebdomadaire.</p>

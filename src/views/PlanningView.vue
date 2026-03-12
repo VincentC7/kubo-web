@@ -31,20 +31,25 @@ function handleModalToggle() {
 </script>
 
 <template>
-  <div class="planning fade-in">
+  <div class="planning fade-in" data-testid="planning-view">
     <header class="planning__header">
       <div>
         <h1 class="planning__title">Menu Hebdo</h1>
         <p class="planning__sub">Votre sélection personnalisée.</p>
       </div>
-      <KuboButton variant="danger" size="sm" @click="clearPlanning">
+      <KuboButton
+        variant="danger"
+        size="sm"
+        data-testid="planning-reset-btn"
+        @click="clearPlanning"
+      >
         <KuboIcon name="rotate-ccw" :size="14" />
         Reset semaine
       </KuboButton>
     </header>
 
     <!-- Grid -->
-    <div v-if="selectedRecipes.length" class="planning__grid">
+    <div v-if="selectedRecipes.length" class="planning__grid" data-testid="planning-grid">
       <PlanningCard
         v-for="recipe in selectedRecipes"
         :key="recipe.id"

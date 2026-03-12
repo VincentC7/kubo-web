@@ -13,7 +13,11 @@ defineEmits(['select', 'toggle'])
 </script>
 
 <template>
-  <article :class="['recipe-card', { 'recipe-card--selected': selected }]" @click="$emit('select')">
+  <article
+    :class="['recipe-card', { 'recipe-card--selected': selected }]"
+    :data-testid="`recipe-card-${recipe.id}`"
+    @click="$emit('select')"
+  >
     <!-- Image -->
     <div class="recipe-card__img-wrap">
       <img :src="recipe.img" :alt="recipe.title" class="recipe-card__img" loading="lazy" />
@@ -44,6 +48,7 @@ defineEmits(['select', 'toggle'])
         <button
           :class="['recipe-card__toggle', { 'recipe-card__toggle--active': selected }]"
           :title="selected ? 'Retirer du menu' : 'Ajouter au menu'"
+          data-testid="recipe-toggle-btn"
           @click.stop="$emit('toggle')"
         >
           <KuboIcon :name="selected ? 'check' : 'plus'" :size="18" />

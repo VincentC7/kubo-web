@@ -37,7 +37,7 @@ async function save() {
 </script>
 
 <template>
-  <div class="settings fade-in">
+  <div class="settings fade-in" data-testid="settings-view">
     <header class="settings__header">
       <h1 class="settings__title">Paramètres</h1>
     </header>
@@ -77,6 +77,7 @@ async function save() {
           :aria-checked="darkMode"
           role="switch"
           aria-label="Activer le mode sombre"
+          data-testid="darkmode-toggle"
           @click="toggleDarkMode"
         >
           <span class="settings__toggle-thumb" />
@@ -90,6 +91,7 @@ async function save() {
       :full-width="true"
       :loading="saving"
       class="settings__save"
+      data-testid="settings-save-btn"
       @click="save"
     >
       Sauvegarder

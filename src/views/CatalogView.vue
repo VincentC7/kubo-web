@@ -37,7 +37,7 @@ function handleModalToggle() {
 </script>
 
 <template>
-  <div class="catalog fade-in">
+  <div class="catalog fade-in" data-testid="catalog-view">
     <!-- Header -->
     <header class="catalog__header">
       <div>
@@ -54,7 +54,7 @@ function handleModalToggle() {
             <KuboIcon name="search" :size="16" />
           </template>
         </KuboInput>
-        <KuboButton variant="dark" @click="filterOpen = true">
+        <KuboButton variant="dark" data-testid="filter-btn" @click="filterOpen = true">
           <KuboIcon name="filter" :size="16" />
           Filtrer
         </KuboButton>
@@ -62,7 +62,7 @@ function handleModalToggle() {
     </header>
 
     <!-- Grid -->
-    <div v-if="filteredRecipes.length" class="catalog__grid">
+    <div v-if="filteredRecipes.length" class="catalog__grid" data-testid="recipe-grid">
       <RecipeCard
         v-for="recipe in filteredRecipes"
         :key="recipe.id"

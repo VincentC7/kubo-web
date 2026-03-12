@@ -23,10 +23,15 @@ const macroTotal = computed(() => {
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="recipe" class="rdm-overlay" @click.self="$emit('close')">
+      <div
+        v-if="recipe"
+        class="rdm-overlay"
+        data-testid="recipe-detail-modal"
+        @click.self="$emit('close')"
+      >
         <div class="rdm">
           <!-- Close -->
-          <button class="rdm__close" @click="$emit('close')">
+          <button class="rdm__close" data-testid="modal-close-btn" @click="$emit('close')">
             <KuboIcon name="x" :size="20" />
           </button>
 
@@ -105,6 +110,7 @@ const macroTotal = computed(() => {
                   :variant="selected ? 'dark' : 'primary'"
                   size="lg"
                   :full-width="true"
+                  data-testid="modal-toggle-btn"
                   @click="$emit('toggle')"
                 >
                   {{ selected ? 'Retirer du menu' : 'Ajouter à ma semaine' }}

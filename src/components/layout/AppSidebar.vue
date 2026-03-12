@@ -17,7 +17,7 @@ const NAV_ITEMS = [
 </script>
 
 <template>
-  <aside :class="['sidebar', { 'sidebar--collapsed': sidebarCollapsed }]">
+  <aside :class="['sidebar', { 'sidebar--collapsed': sidebarCollapsed }]" data-testid="sidebar">
     <!-- Logo + toggle -->
     <div class="sidebar__top">
       <div class="sidebar__brand">
@@ -26,18 +26,24 @@ const NAV_ITEMS = [
         </div>
         <span v-show="!sidebarCollapsed" class="sidebar__name">kubo</span>
       </div>
-      <button class="sidebar__toggle" title="Réduire" @click="toggleSidebar">
+      <button
+        class="sidebar__toggle"
+        title="Réduire"
+        data-testid="sidebar-toggle"
+        @click="toggleSidebar"
+      >
         <KuboIcon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="18" />
       </button>
     </div>
 
     <!-- Navigation -->
-    <nav class="sidebar__nav">
+    <nav class="sidebar__nav" data-testid="sidebar-nav">
       <button
         v-for="item in NAV_ITEMS"
         :key="item.id"
         :class="['sidebar__item', { 'sidebar__item--active': currentView === item.id }]"
         :title="sidebarCollapsed ? item.label : undefined"
+        :data-testid="`nav-${item.id}`"
         @click="navTo(item.id)"
       >
         <KuboIcon :name="item.icon" :size="20" />
@@ -49,6 +55,7 @@ const NAV_ITEMS = [
       <button
         :class="['sidebar__item', { 'sidebar__item--active': currentView === 'settings' }]"
         :title="sidebarCollapsed ? 'Paramètres' : undefined"
+        data-testid="nav-settings"
         @click="navTo('settings')"
       >
         <KuboIcon name="settings" :size="20" />

@@ -11,7 +11,7 @@ const { selectedRecipes, isDone } = useApp()
 </script>
 
 <template>
-  <div class="groceries fade-in">
+  <div class="groceries fade-in" data-testid="groceries-view">
     <header class="groceries__header">
       <h1 class="groceries__title">Courses</h1>
       <p class="groceries__sub">Ingrédients générés depuis votre menu.</p>

@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js",
     "lint:fix": "eslint . --ext .vue,.js --fix",
-    "format": "prettier --write \"src/**/*.{vue,js,css,json}\""
+    "format": "prettier --write \"src/**/*.{vue,js,css,json}\"",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "chart.js": "^4.5.1",
@@ -17,6 +21,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.5.0",
     "@vitejs/plugin-vue": "^6.0.4",
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",

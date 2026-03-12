@@ -14,7 +14,10 @@ defineEmits(['done', 'remove', 'open'])
 </script>
 
 <template>
-  <article :class="['plan-card', { 'plan-card--done': done }]">
+  <article
+    :class="['plan-card', { 'plan-card--done': done }]"
+    :data-testid="`plan-card-${recipe.id}`"
+  >
     <div class="plan-card__body" @click="$emit('open')">
       <h3 :class="['plan-card__title', { 'plan-card__title--done': done }]">
         {{ recipe.title }}
@@ -26,10 +29,20 @@ defineEmits(['done', 'remove', 'open'])
     </div>
 
     <div class="plan-card__actions">
-      <KuboButton :variant="done ? 'secondary' : 'primary'" size="sm" @click="$emit('done')">
+      <KuboButton
+        :variant="done ? 'secondary' : 'primary'"
+        size="sm"
+        data-testid="plan-card-done-btn"
+        @click="$emit('done')"
+      >
         {{ done ? 'Cuisiné ✓' : 'Marquer fait' }}
       </KuboButton>
-      <button class="plan-card__remove" title="Retirer" @click="$emit('remove')">
+      <button
+        class="plan-card__remove"
+        title="Retirer"
+        data-testid="plan-card-remove-btn"
+        @click="$emit('remove')"
+      >
         <KuboIcon name="trash-2" :size="16" />
       </button>
     </div>
