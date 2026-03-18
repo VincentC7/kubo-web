@@ -2,28 +2,25 @@
 /**
  * CatalogView — Vue catalogue des recettes
  */
-import { ref } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboInput from '@/components/ui/KuboInput.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import RecipeCard from '@/components/recipes/RecipeCard.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
 import FilterModal from '@/components/recipes/FilterModal.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
-const {
-  filteredRecipes,
-  isSelected,
-  toggleRecipe,
-  setSearch,
-  filters,
-  notify,
-  selectedRecipes,
-  mealsGoal,
-} = useApp()
+const store = useAppStore()
+const { filteredRecipes, filters, selectedRecipes, mealsGoal, catalogLoading, catalogHasMore } =
+  storeToRefs(store)
+const { isSelected, toggleRecipe, setSearch, notify, loadMoreRecipes } = store
 
 const filterOpen = ref(false)
 const detailRecipe = ref(null)
+const sentinel = ref(null)
+let observer = null
 
 function openDetail(recipe) {
   detailRecipe.value = recipe
@@ -43,6 +40,32 @@ function handleModalToggle() {
   handleToggle(detailRecipe.value)
   closeDetail()
 }
+
+onMounted(() => {
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && catalogHasMore.value && !catalogLoading.value) {
+        loadMoreRecipes()
+      }
+    },
+    { rootMargin: '200px' },
+  )
+  if (sentinel.value) observer.observe(sentinel.value)
+})
+
+// Re-déclenche un check dès que catalogHasMore passe à true (données chargées)
+// et que le sentinel est toujours visible dans le viewport.
+watch(catalogHasMore, async (hasMore) => {
+  if (!hasMore || !observer || !sentinel.value) return
+  // Déconnecter puis ré-observer force l'IntersectionObserver à re-évaluer
+  observer.unobserve(sentinel.value)
+  await nextTick()
+  observer.observe(sentinel.value)
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+})
 </script>
 
 <template>
@@ -91,6 +114,13 @@ function handleModalToggle() {
     <div v-else class="catalog__empty">
       <KuboIcon name="search" :size="40" />
       <p>Aucune recette ne correspond à vos filtres.</p>
+    </div>
+
+    <!-- Sentinel + loader pour l'infinite scroll -->
+    <div ref="sentinel" class="catalog__sentinel" aria-hidden="true" />
+    <div v-if="catalogLoading" class="catalog__loader">
+      <span class="catalog__spinner" />
+      Chargement…
     </div>
 
     <!-- Modals -->
@@ -178,5 +208,36 @@ function handleModalToggle() {
   font-size: 15px;
   font-weight: 600;
   text-align: center;
+}
+
+.catalog__sentinel {
+  height: 1px;
+}
+
+.catalog__loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 0 48px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kubo-text-muted);
+}
+
+.catalog__spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--kubo-border);
+  border-top-color: var(--kubo-green);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

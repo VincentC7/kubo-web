@@ -6,9 +6,12 @@ import { ref } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import PlanningCard from '@/components/planning/PlanningCard.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
-const { selectedRecipes, isDone, isSelected, markAsDone, toggleRecipe, notify } = useApp()
+const store = useAppStore()
+const { selectedRecipes } = storeToRefs(store)
+const { isDone, isSelected, markAsDone, toggleRecipe, notify } = store
 
 const detailRecipe = ref(null)
 

@@ -4,20 +4,15 @@
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
 defineProps({ visible: { type: Boolean, default: false } })
 defineEmits(['close'])
 
-const {
-  filters,
-  allCategories,
-  allTags,
-  setFilterCategory,
-  setFilterMaxTime,
-  toggleFilterTag,
-  resetFilters,
-} = useApp()
+const store = useAppStore()
+const { filters, allCategories, allTags } = storeToRefs(store)
+const { setFilterCategory, setFilterMaxTime, toggleFilterTag, resetFilters } = store
 
 const TIME_OPTIONS = [
   { label: 'Tout', value: 0 },

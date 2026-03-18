@@ -5,18 +5,13 @@
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboProgressBar from '@/components/ui/KuboProgressBar.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
-const {
-  currentView,
-  periodLabel,
-  changePeriod,
-  progressPercent,
-  progressLabel,
-  progressText,
-  clearPlanning,
-  user,
-} = useApp()
+const store = useAppStore()
+const { currentView, periodLabel, progressPercent, progressLabel, progressText, user } =
+  storeToRefs(store)
+const { changePeriod, clearPlanning } = store
 </script>
 
 <template>

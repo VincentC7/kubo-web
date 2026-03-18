@@ -5,9 +5,12 @@
 import { computed } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
-const { inventory, updateInventory, notify, selectedRecipes, isInInventory } = useApp()
+const store = useAppStore()
+const { inventory, selectedRecipes } = storeToRefs(store)
+const { updateInventory, notify, isInInventory } = store
 
 const missingIngredients = computed(() => {
   const missing = []

@@ -3,10 +3,12 @@
  * AppSidebar — Organisme navigation principale
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
-const { currentView, navTo, sidebarCollapsed, toggleSidebar, user, showInventory, showGroceries } =
-  useApp()
+const store = useAppStore()
+const { currentView, sidebarCollapsed, user, showInventory, showGroceries } = storeToRefs(store)
+const { navTo, toggleSidebar } = store
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Tableau de bord', icon: 'layout-dashboard' },

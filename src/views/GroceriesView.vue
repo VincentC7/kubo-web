@@ -4,9 +4,12 @@
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import GroceryGroup from '@/components/shopping/GroceryGroup.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
-const { selectedRecipes, isDone, totalPrice } = useApp()
+const store = useAppStore()
+const { selectedRecipes, totalPrice } = storeToRefs(store)
+const { isDone } = store
 </script>
 
 <template>

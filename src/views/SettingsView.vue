@@ -6,19 +6,12 @@ import { ref, watch } from 'vue'
 import KuboCard from '@/components/ui/KuboCard.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
-const {
-  darkMode,
-  toggleDarkMode,
-  notify,
-  showInventory,
-  showGroceries,
-  portions,
-  mealsGoal,
-  updatePortions,
-  updateMealsGoal,
-} = useApp()
+const store = useAppStore()
+const { darkMode, showInventory, showGroceries, portions, mealsGoal } = storeToRefs(store)
+const { toggleDarkMode, notify, updatePortions, updateMealsGoal } = store
 
 const localShowInventory = ref(showInventory.value)
 const localShowGroceries = ref(showGroceries.value)

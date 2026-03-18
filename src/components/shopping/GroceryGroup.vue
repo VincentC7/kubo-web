@@ -5,14 +5,17 @@
  */
 import { computed } from 'vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
 const props = defineProps({
   recipe: { type: Object, required: true },
   done: { type: Boolean, default: false },
 })
 
-const { isInInventory, updateInventory, toggleRecipeIngredients, portions } = useApp()
+const store = useAppStore()
+const { portions } = storeToRefs(store)
+const { isInInventory, updateInventory, toggleRecipeIngredients } = store
 
 const allChecked = computed(() => props.recipe.ingredients.every((ing) => isInInventory(ing.name)))
 

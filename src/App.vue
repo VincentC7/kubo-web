@@ -9,9 +9,12 @@ import PlanningView from '@/views/PlanningView.vue'
 import GroceriesView from '@/views/GroceriesView.vue'
 import InventoryView from '@/views/InventoryView.vue'
 import SettingsView from '@/views/SettingsView.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
-const { currentView, loading, init } = useApp()
+const store = useAppStore()
+const { currentView, loading } = storeToRefs(store)
+const { init } = store
 
 onMounted(() => init())
 </script>

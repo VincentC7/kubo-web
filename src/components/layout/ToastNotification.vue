@@ -1,6 +1,7 @@
 <script setup>
-import { useApp } from '@/composables/useApp.js'
-const { toastMessage, toastVisible } = useApp()
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
+const { toastMessage, toastVisible } = storeToRefs(useAppStore())
 </script>
 
 <template>

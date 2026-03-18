@@ -19,20 +19,13 @@ import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboProgressBar from '@/components/ui/KuboProgressBar.vue'
 import NutritionLegendItem from '@/components/recipes/NutritionLegendItem.vue'
-import { useApp } from '@/composables/useApp.js'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.js'
 
-const {
-  selectedRecipes,
-  doneRecipes,
-  mealsGoal,
-  nutritionTotals,
-  navTo,
-  isDone,
-  viewMode,
-  switchViewMode,
-  totalPrice,
-  avgPrice,
-} = useApp()
+const store = useAppStore()
+const { selectedRecipes, doneRecipes, mealsGoal, nutritionTotals, viewMode, totalPrice, avgPrice } =
+  storeToRefs(store)
+const { navTo, isDone, switchViewMode } = store
 
 const hasData = computed(() => selectedRecipes.value.length > 0)
 
