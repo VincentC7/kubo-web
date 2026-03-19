@@ -9,18 +9,14 @@ import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
 import { useUserStore } from '@/stores/userStore'
-import { useInventoryStore } from '@/stores/inventoryStore'
 
 const uiStore = useUiStore()
-const { darkMode } = storeToRefs(uiStore)
+const { darkMode, showInventory, showGroceries } = storeToRefs(uiStore)
 const { toggleDarkMode, notify } = uiStore
 
 const userStore = useUserStore()
 const { portions, mealsGoal } = storeToRefs(userStore)
 const { updatePortions, updateMealsGoal } = userStore
-
-const inventoryStore = useInventoryStore()
-const { showInventory, showGroceries } = storeToRefs(inventoryStore)
 
 const localShowInventory = ref(showInventory.value)
 const localShowGroceries = ref(showGroceries.value)
@@ -33,8 +29,8 @@ watch(showGroceries, (v) => {
 })
 
 function save(): void {
-  inventoryStore.showInventory = localShowInventory.value
-  inventoryStore.showGroceries = localShowGroceries.value
+  uiStore.showInventory = localShowInventory.value
+  uiStore.showGroceries = localShowGroceries.value
   notify('Paramètres sauvegardés')
 }
 </script>

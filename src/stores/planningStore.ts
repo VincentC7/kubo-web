@@ -6,12 +6,14 @@ import { useUiStore } from './uiStore'
 import type { WeekEntry, WeeklyData } from '@/types/planning'
 
 // ---- Helpers semaine ----
+const MS_PER_DAY = 86400000
+
 function getWeekKey(date: Date): string {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
   d.setDate(d.getDate() + 4 - (d.getDay() || 7))
   const yearStart = new Date(d.getFullYear(), 0, 1)
-  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / MS_PER_DAY + 1) / 7)
   return `${d.getFullYear()}-W${weekNo}`
 }
 
@@ -35,13 +37,7 @@ export const usePlanningStore = defineStore('planning', () => {
   const weekKey = computed(() => getWeekKey(currentDate.value))
   const weekRange = computed(() => getWeekRange(currentDate.value))
 
-  const periodLabel = computed(() => {
-    const uiStore = useUiStore()
-    const tab = uiStore.currentView
-    const mode = ['catalog', 'planning', 'groceries', 'inventory'].includes(tab) ? 'week' : 'week'
-    if (mode === 'week') return getWeekRange(currentDate.value)
-    return String(currentDate.value.getFullYear())
-  })
+  const periodLabel = computed(() => getWeekRange(currentDate.value))
 
   const selectedRecipes = computed(() => {
     const recipeStore = useRecipeStore()

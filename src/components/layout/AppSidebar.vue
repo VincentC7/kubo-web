@@ -6,20 +6,17 @@ import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
 import { useUserStore } from '@/stores/userStore'
-import { useInventoryStore } from '@/stores/inventoryStore'
+import type { ViewName } from '@/stores/uiStore'
 
 const uiStore = useUiStore()
-const { currentView, sidebarCollapsed } = storeToRefs(uiStore)
+const { currentView, sidebarCollapsed, showInventory, showGroceries } = storeToRefs(uiStore)
 const { navTo, toggleSidebar } = uiStore
 
 const userStore = useUserStore()
 const { user } = storeToRefs(userStore)
 
-const inventoryStore = useInventoryStore()
-const { showInventory, showGroceries } = storeToRefs(inventoryStore)
-
 interface NavItem {
-  id: string
+  id: ViewName
   label: string
   icon: string
 }

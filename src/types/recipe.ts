@@ -21,8 +21,6 @@ export interface RecipeListItem {
   steps: string[]
 }
 
-export interface RecipeDetail extends RecipeListItem {}
-
 export interface RecipeWithPrice extends RecipeListItem {
   totalPrice: number
 }
@@ -42,7 +40,6 @@ export interface RecetteListItemDto {
   image_url: string | null
   temps_total: number
   difficulte: string
-  nb_personnes: number
   tags: string[]
 }
 

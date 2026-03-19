@@ -98,6 +98,7 @@ async function renderChart() {
 }
 
 function getBudgetData() {
+  // Données de démo — à remplacer par l'API
   if (viewMode.value === 'week') {
     return {
       labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
@@ -164,13 +165,7 @@ function renderBudgetChart() {
   })
 }
 
-watch(
-  [selectedRecipes, nutritionTotals],
-  () => {
-    renderChart()
-  },
-  { deep: true },
-)
+watch([selectedRecipes, nutritionTotals], renderChart, { deep: true })
 
 watch(viewMode, () => {
   renderBudgetChart()

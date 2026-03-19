@@ -6,9 +6,8 @@
  */
 withDefaults(
   defineProps<{
-    variant?: string
-    size?: string
-    icon?: string | null
+    variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'dark'
+    size?: 'sm' | 'md' | 'lg'
     loading?: boolean
     disabled?: boolean
     fullWidth?: boolean
@@ -16,7 +15,6 @@ withDefaults(
   {
     variant: 'primary',
     size: 'md',
-    icon: null,
     loading: false,
     disabled: false,
     fullWidth: false,
@@ -154,11 +152,5 @@ defineEmits<{ click: [event: MouseEvent] }>()
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>

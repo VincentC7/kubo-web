@@ -160,27 +160,4 @@ const progressLabel = 'Courses cochées'
   font-weight: 800;
   color: var(--kubo-green);
 }
-
-/* Avatar */
-.app-header__avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--kubo-surface-mute);
-  border: 2px solid var(--kubo-surface);
-  box-shadow: var(--shadow-card);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 13px;
-  color: var(--kubo-text-muted);
-  cursor: pointer;
-}
-.app-header__avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 </style>

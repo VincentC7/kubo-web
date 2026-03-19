@@ -3,8 +3,6 @@ export interface User {
   name: string
   initials: string
   role: string
-  goalKcal: number
-  avatar: string
 }
 
 export interface Settings {

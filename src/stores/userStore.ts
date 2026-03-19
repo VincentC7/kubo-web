@@ -25,11 +25,6 @@ export const useUserStore = defineStore('user', () => {
     viewMode.value = mode
   }
 
-  async function saveUser(payload: Partial<User>): Promise<void> {
-    const updated = await userService.saveUser(payload)
-    user.value = updated
-  }
-
   async function init(): Promise<void> {
     const [userData, settings] = await Promise.all([
       userService.getUser(),
@@ -53,7 +48,6 @@ export const useUserStore = defineStore('user', () => {
     updatePortions,
     updateMealsGoal,
     switchViewMode,
-    saveUser,
     init,
   }
 })

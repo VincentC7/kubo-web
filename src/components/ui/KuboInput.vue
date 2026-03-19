@@ -8,14 +8,12 @@ withDefaults(
     type?: string
     placeholder?: string
     label?: string | null
-    icon?: string | null
   }>(),
   {
     modelValue: '',
     type: 'text',
     placeholder: '',
     label: null,
-    icon: null,
   },
 )
 defineEmits<{ 'update:modelValue': [value: string] }>()
@@ -31,7 +29,7 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
         :value="modelValue"
         :placeholder="placeholder"
         class="kubo-input"
-        @input="$emit('update:modelValue', $event.target.value)"
+        @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
     </div>
   </div>

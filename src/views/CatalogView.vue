@@ -248,10 +248,4 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 </style>

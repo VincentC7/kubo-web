@@ -2,6 +2,7 @@
 /**
  * RecipeCard — Molécule carte de recette dans le catalogue
  */
+import { ref } from 'vue'
 import KuboTag from '@/components/ui/KuboTag.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import type { RecipeWithPrice } from '@/types/recipe'
@@ -14,6 +15,8 @@ withDefaults(
   { selected: false },
 )
 defineEmits<{ select: []; toggle: [] }>()
+
+const imgError = ref(false)
 </script>
 
 <template>
@@ -24,7 +27,17 @@ defineEmits<{ select: []; toggle: [] }>()
   >
     <!-- Image -->
     <div class="recipe-card__img-wrap">
-      <img :src="recipe.img" :alt="recipe.title" class="recipe-card__img" loading="lazy" />
+      <img
+        v-if="!imgError"
+        :src="recipe.img"
+        :alt="recipe.title"
+        class="recipe-card__img"
+        loading="lazy"
+        @error="imgError = true"
+      />
+      <div v-else class="recipe-card__img-fallback" aria-hidden="true">
+        <KuboIcon name="chef-hat" :size="40" />
+      </div>
       <div class="recipe-card__overlay" />
     </div>
 
@@ -91,6 +104,7 @@ defineEmits<{ select: []; toggle: [] }>()
   position: relative;
   aspect-ratio: 4 / 3;
   overflow: hidden;
+  background: var(--kubo-green-light);
 }
 
 .recipe-card__img {
@@ -102,6 +116,16 @@ defineEmits<{ select: []; toggle: [] }>()
 
 .recipe-card:hover .recipe-card__img {
   transform: scale(1.08);
+}
+
+.recipe-card__img-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--kubo-green);
+  opacity: 0.5;
 }
 
 .recipe-card__overlay {

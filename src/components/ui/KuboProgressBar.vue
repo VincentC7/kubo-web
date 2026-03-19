@@ -5,7 +5,7 @@
 withDefaults(
   defineProps<{
     value?: number
-    color?: string
+    color?: 'green' | 'blue' | 'orange' | 'emerald'
     thin?: boolean
   }>(),
   {

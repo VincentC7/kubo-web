@@ -7,32 +7,32 @@ import type { Ingredient } from '@/types/recipe'
 export const useInventoryStore = defineStore('inventory', () => {
   // ---- State ----
   const inventory = ref<Ingredient[]>([])
-  const showInventory = ref(true)
-  const showGroceries = ref(true)
 
   // ---- Computed ----
-  const progressPercent = computed(() => {
+  const groceryProgress = computed(() => {
     const planningStore = usePlanningStore()
-    const totalIngs = planningStore.selectedRecipes.flatMap((r) => r.ingredients).length
-    if (!totalIngs) return 0
-    const checked = planningStore.selectedRecipes
-      .flatMap((r) => r.ingredients)
-      .filter((i) => inventory.value.find((inv) => inv.name === i.name)).length
-    return Math.round((checked / totalIngs) * 100)
+    const allIngredients = planningStore.selectedRecipes.flatMap((r) => r.ingredients)
+    const total = allIngredients.length
+    const checked = allIngredients.filter((i) =>
+      inventory.value.some((inv) => inv.name === i.name),
+    ).length
+    return { checked, total }
+  })
+
+  const progressPercent = computed(() => {
+    const { checked, total } = groceryProgress.value
+    if (!total) return 0
+    return Math.round((checked / total) * 100)
   })
 
   const progressText = computed(() => {
-    const planningStore = usePlanningStore()
-    const totalIngs = planningStore.selectedRecipes.flatMap((r) => r.ingredients).length
-    const checked = planningStore.selectedRecipes
-      .flatMap((r) => r.ingredients)
-      .filter((i) => inventory.value.find((inv) => inv.name === i.name)).length
-    return `${checked}/${totalIngs}`
+    const { checked, total } = groceryProgress.value
+    return `${checked}/${total}`
   })
 
   // ---- Actions ----
   function isInInventory(name: string): boolean {
-    return !!inventory.value.find((i) => i.name === name)
+    return inventory.value.some((i) => i.name === name)
   }
 
   function updateInventory(ingredient: Ingredient, isAdding: boolean): void {
@@ -63,29 +63,17 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
   }
 
-  function consumeRecipeIngredients(recipeId: string): void {
-    const planningStore = usePlanningStore()
-    const recipe = planningStore.selectedRecipes.find((r) => r.id === recipeId)
-    if (!recipe) return
-    recipe.ingredients.forEach((ing) => {
-      inventory.value = inventory.value.filter((item) => item.name !== ing.name)
-    })
-  }
-
   async function init(): Promise<void> {
     inventory.value = await inventoryService.getInventory()
   }
 
   return {
     inventory,
-    showInventory,
-    showGroceries,
     progressPercent,
     progressText,
     isInInventory,
     updateInventory,
     toggleRecipeIngredients,
-    consumeRecipeIngredients,
     init,
   }
 })

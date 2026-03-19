@@ -1,20 +1,21 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
+
+export type ViewName = 'dashboard' | 'catalog' | 'planning' | 'groceries' | 'inventory' | 'settings'
 
 export const useUiStore = defineStore('ui', () => {
   // ---- State ----
-  const currentView = ref('dashboard')
+  const currentView = ref<ViewName>('dashboard')
   const sidebarCollapsed = ref(false)
   const darkMode = ref(false)
   const toastMessage = ref('')
   const toastVisible = ref(false)
+  const showInventory = ref(true)
+  const showGroceries = ref(true)
   let toastTimer: ReturnType<typeof setTimeout> | null = null
 
-  // ---- Computed ----
-  const periodLabel = computed(() => currentView.value)
-
   // ---- Actions ----
-  function navTo(view: string): void {
+  function navTo(view: ViewName): void {
     currentView.value = view
   }
 
@@ -46,7 +47,8 @@ export const useUiStore = defineStore('ui', () => {
     darkMode,
     toastMessage,
     toastVisible,
-    periodLabel,
+    showInventory,
+    showGroceries,
     navTo,
     toggleSidebar,
     setDarkMode,

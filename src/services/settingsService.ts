@@ -1,7 +1,7 @@
 import type { Settings } from '@/types/user'
 
-// Mocké — pas d'endpoint settings disponible pour l'instant
-const MOCK_SETTINGS: Settings = {
+// Mocké — à remplacer par l'API
+let mockSettings: Settings = {
   portions: 2,
   mealsGoal: 5,
   darkMode: false,
@@ -10,11 +10,11 @@ const MOCK_SETTINGS: Settings = {
 
 export const settingsService = {
   async getSettings(): Promise<Settings> {
-    return { ...MOCK_SETTINGS }
+    return { ...mockSettings }
   },
 
   async saveSettings(payload: Partial<Settings>): Promise<Settings> {
-    Object.assign(MOCK_SETTINGS, payload)
-    return { ...MOCK_SETTINGS }
+    Object.assign(mockSettings, payload)
+    return { ...mockSettings }
   },
 }
