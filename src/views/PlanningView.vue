@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * PlanningView — Vue menu hebdomadaire
  */
@@ -7,24 +7,29 @@ import KuboIcon from '@/components/ui/KuboIcon.vue'
 import PlanningCard from '@/components/planning/PlanningCard.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { usePlanningStore } from '@/stores/planningStore'
+import { useUiStore } from '@/stores/uiStore'
+import type { RecipeWithPrice } from '@/types/recipe'
 
-const store = useAppStore()
-const { selectedRecipes } = storeToRefs(store)
-const { isDone, isSelected, markAsDone, toggleRecipe, notify } = store
+const planningStore = usePlanningStore()
+const { selectedRecipes } = storeToRefs(planningStore)
+const { isDone, isSelected, markAsDone, toggleRecipe } = planningStore
 
-const detailRecipe = ref(null)
+const uiStore = useUiStore()
+const { notify } = uiStore
 
-function openDetail(recipe) {
+const detailRecipe = ref<RecipeWithPrice | null>(null)
+
+function openDetail(recipe: RecipeWithPrice): void {
   detailRecipe.value = recipe
 }
 
-function handleRemove(recipe) {
+function handleRemove(recipe: RecipeWithPrice): void {
   toggleRecipe(recipe.id)
   notify(`"${recipe.title}" retiré du menu`)
 }
 
-function handleModalToggle() {
+function handleModalToggle(): void {
   if (!detailRecipe.value) return
   toggleRecipe(detailRecipe.value.id)
   detailRecipe.value = null

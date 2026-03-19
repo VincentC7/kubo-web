@@ -1,15 +1,15 @@
-<script setup>
+<script setup lang="ts">
 /**
  * GroceriesView — Vue liste de courses avec total prix
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import GroceryGroup from '@/components/shopping/GroceryGroup.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { usePlanningStore } from '@/stores/planningStore'
 
-const store = useAppStore()
-const { selectedRecipes, totalPrice } = storeToRefs(store)
-const { isDone } = store
+const planningStore = usePlanningStore()
+const { selectedRecipes, totalPrice } = storeToRefs(planningStore)
+const { isDone } = planningStore
 </script>
 
 <template>

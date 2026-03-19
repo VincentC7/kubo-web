@@ -1,8 +1,8 @@
-<script setup>
+<script setup lang="ts">
 /**
  * KuboTag — Atome pastille de tag colorée
  */
-const TAG_COLORS = {
+const TAG_COLORS: Record<string, string> = {
   Bio: 'green',
   Vege: 'green',
   Frais: 'green',
@@ -19,10 +19,13 @@ const TAG_COLORS = {
   Noix: 'default',
 }
 
-const props = defineProps({
-  label: { type: String, required: true },
-  color: { type: String, default: null },
-})
+const props = withDefaults(
+  defineProps<{
+    label: string
+    color?: string | null
+  }>(),
+  { color: null },
+)
 
 const colorClass = props.color
   ? `kubo-tag--${props.color}`

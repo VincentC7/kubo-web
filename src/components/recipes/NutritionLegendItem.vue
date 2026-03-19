@@ -1,16 +1,16 @@
-<script setup>
+<script setup lang="ts">
 /**
  * NutritionLegendItem — Molécule ligne de légende du graphe nutritionnel
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 
-defineProps({
-  label: { type: String, required: true },
-  percent: { type: Number, required: true },
-  grams: { type: Number, required: true },
-  icon: { type: String, required: true },
-  color: { type: String, required: true }, // hex
-})
+defineProps<{
+  label: string
+  percent: number
+  grams: number
+  icon: string
+  color: string
+}>()
 </script>
 
 <template>

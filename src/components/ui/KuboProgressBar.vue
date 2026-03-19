@@ -1,12 +1,19 @@
-<script setup>
+<script setup lang="ts">
 /**
  * KuboProgressBar — Atome barre de progression
  */
-defineProps({
-  value: { type: Number, default: 0 }, // 0–100
-  color: { type: String, default: 'green' }, // green | blue | orange
-  thin: { type: Boolean, default: false },
-})
+withDefaults(
+  defineProps<{
+    value?: number
+    color?: string
+    thin?: boolean
+  }>(),
+  {
+    value: 0,
+    color: 'green',
+    thin: false,
+  },
+)
 </script>
 
 <template>

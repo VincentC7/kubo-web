@@ -1,5 +1,5 @@
-<script setup>
-import { onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import ToastNotification from '@/components/layout/ToastNotification.vue'
@@ -10,13 +10,29 @@ import GroceriesView from '@/views/GroceriesView.vue'
 import InventoryView from '@/views/InventoryView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { useUiStore } from '@/stores/uiStore'
+import { useUserStore } from '@/stores/userStore'
+import { useRecipeStore } from '@/stores/recipeStore'
+import { usePlanningStore } from '@/stores/planningStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
 
-const store = useAppStore()
-const { currentView, loading } = storeToRefs(store)
-const { init } = store
+const uiStore = useUiStore()
+const { currentView } = storeToRefs(uiStore)
 
-onMounted(() => init())
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    await Promise.all([
+      useUserStore().init(),
+      useRecipeStore().init(),
+      usePlanningStore().init(),
+      useInventoryStore().init(),
+    ])
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>

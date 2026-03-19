@@ -1,20 +1,25 @@
-<script setup>
+<script setup lang="ts">
 /**
  * FilterModal — Organisme panneau latéral de filtres
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { useRecipeStore } from '@/stores/recipeStore'
 
-defineProps({ visible: { type: Boolean, default: false } })
-defineEmits(['close'])
+withDefaults(defineProps<{ visible?: boolean }>(), { visible: false })
+defineEmits<{ close: [] }>()
 
-const store = useAppStore()
+const store = useRecipeStore()
 const { filters, allCategories, allTags } = storeToRefs(store)
 const { setFilterCategory, setFilterMaxTime, toggleFilterTag, resetFilters } = store
 
-const TIME_OPTIONS = [
+interface TimeOption {
+  label: string
+  value: number
+}
+
+const TIME_OPTIONS: TimeOption[] = [
   { label: 'Tout', value: 0 },
   { label: '20 min', value: 20 },
   { label: '40 min', value: 40 },

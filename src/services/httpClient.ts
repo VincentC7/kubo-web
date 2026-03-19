@@ -1,9 +1,6 @@
-/**
- * httpClient — Instance axios configurée pour l'API Kubo
- */
-import axios from 'axios'
+import axios, { type AxiosInstance } from 'axios'
 
-const httpClient = axios.create({
+const httpClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
   headers: {
     'Content-Type': 'application/json',
@@ -12,11 +9,10 @@ const httpClient = axios.create({
   timeout: 10000,
 })
 
-// Intercepteur de réponse : normalise les erreurs
 httpClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message =
+    const message: string =
       error.response?.data?.error ??
       error.response?.data?.message ??
       error.message ??

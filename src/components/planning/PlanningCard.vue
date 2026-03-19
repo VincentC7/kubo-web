@@ -1,16 +1,20 @@
-<script setup>
+<script setup lang="ts">
 /**
  * PlanningCard — Molécule carte de plat dans le menu hebdo
  */
 import KuboTag from '@/components/ui/KuboTag.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
+import type { RecipeWithPrice } from '@/types/recipe'
 
-defineProps({
-  recipe: { type: Object, required: true },
-  done: { type: Boolean, default: false },
-})
-defineEmits(['done', 'remove', 'open'])
+withDefaults(
+  defineProps<{
+    recipe: RecipeWithPrice
+    done?: boolean
+  }>(),
+  { done: false },
+)
+defineEmits<{ done: []; remove: []; open: [] }>()
 </script>
 
 <template>

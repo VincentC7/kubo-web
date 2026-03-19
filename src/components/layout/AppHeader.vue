@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * AppHeader — Organisme en-tête global sticky (contextuel)
  */
@@ -6,12 +6,21 @@ import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboProgressBar from '@/components/ui/KuboProgressBar.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { useUiStore } from '@/stores/uiStore'
+import { usePlanningStore } from '@/stores/planningStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
 
-const store = useAppStore()
-const { currentView, periodLabel, progressPercent, progressLabel, progressText, user } =
-  storeToRefs(store)
-const { changePeriod, clearPlanning } = store
+const uiStore = useUiStore()
+const { currentView } = storeToRefs(uiStore)
+
+const planningStore = usePlanningStore()
+const { periodLabel } = storeToRefs(planningStore)
+const { changePeriod, clearPlanning } = planningStore
+
+const inventoryStore = useInventoryStore()
+const { progressPercent, progressText } = storeToRefs(inventoryStore)
+
+const progressLabel = 'Courses cochées'
 </script>
 
 <template>

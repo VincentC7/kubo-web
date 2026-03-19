@@ -1,15 +1,18 @@
-<script setup>
+<script setup lang="ts">
 /**
  * MacroBar — Molécule affichage d'un macro-nutriment
  */
 import { computed } from 'vue'
 
-const props = defineProps({
-  label: { type: String, required: true },
-  value: { type: Number, required: true },
-  max: { type: Number, required: true },
-  color: { type: String, default: 'blue' },
-})
+const props = withDefaults(
+  defineProps<{
+    label: string
+    value: number
+    max: number
+    color?: string
+  }>(),
+  { color: 'blue' },
+)
 
 const percent = computed(() => {
   if (!props.max) return 0

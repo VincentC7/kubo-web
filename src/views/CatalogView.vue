@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * CatalogView — Vue catalogue des recettes
  */
@@ -10,33 +10,47 @@ import RecipeCard from '@/components/recipes/RecipeCard.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
 import FilterModal from '@/components/recipes/FilterModal.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { useRecipeStore } from '@/stores/recipeStore'
+import { usePlanningStore } from '@/stores/planningStore'
+import { useUserStore } from '@/stores/userStore'
+import { useUiStore } from '@/stores/uiStore'
+import type { RecipeWithPrice } from '@/types/recipe'
 
-const store = useAppStore()
-const { filteredRecipes, filters, selectedRecipes, mealsGoal, catalogLoading, catalogHasMore } =
-  storeToRefs(store)
-const { isSelected, toggleRecipe, setSearch, notify, loadMoreRecipes } = store
+const recipeStore = useRecipeStore()
+const { filteredRecipes, filters, catalogLoading, catalogHasMore } = storeToRefs(recipeStore)
+const { setSearch, loadMoreRecipes } = recipeStore
+
+const planningStore = usePlanningStore()
+const { selectedRecipes } = storeToRefs(planningStore)
+const { isSelected, toggleRecipe } = planningStore
+
+const userStore = useUserStore()
+const { mealsGoal } = storeToRefs(userStore)
+
+const uiStore = useUiStore()
+const { notify } = uiStore
 
 const filterOpen = ref(false)
-const detailRecipe = ref(null)
-const sentinel = ref(null)
-let observer = null
+const detailRecipe = ref<RecipeWithPrice | null>(null)
+const sentinel = ref<HTMLDivElement | null>(null)
+let observer: IntersectionObserver | null = null
 
-function openDetail(recipe) {
+function openDetail(recipe: RecipeWithPrice): void {
   detailRecipe.value = recipe
 }
 
-function closeDetail() {
+function closeDetail(): void {
   detailRecipe.value = null
 }
 
-function handleToggle(recipe) {
+function handleToggle(recipe: RecipeWithPrice): void {
   toggleRecipe(recipe.id)
   const sel = isSelected(recipe.id)
   notify(sel ? `"${recipe.title}" ajouté au menu` : `"${recipe.title}" retiré du menu`)
 }
 
-function handleModalToggle() {
+function handleModalToggle(): void {
+  if (!detailRecipe.value) return
   handleToggle(detailRecipe.value)
   closeDetail()
 }

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * DashboardView — Vue tableau de bord nutritionnel + budget
  */
@@ -20,22 +20,31 @@ import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboProgressBar from '@/components/ui/KuboProgressBar.vue'
 import NutritionLegendItem from '@/components/recipes/NutritionLegendItem.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { usePlanningStore } from '@/stores/planningStore'
+import { useUserStore } from '@/stores/userStore'
+import { useUiStore } from '@/stores/uiStore'
 
-const store = useAppStore()
-const { selectedRecipes, doneRecipes, mealsGoal, nutritionTotals, viewMode, totalPrice, avgPrice } =
-  storeToRefs(store)
-const { navTo, isDone, switchViewMode } = store
+const planningStore = usePlanningStore()
+const { selectedRecipes, doneRecipes, nutritionTotals, totalPrice, avgPrice } =
+  storeToRefs(planningStore)
+const { isDone } = planningStore
+
+const userStore = useUserStore()
+const { mealsGoal, viewMode } = storeToRefs(userStore)
+const { switchViewMode } = userStore
+
+const uiStore = useUiStore()
+const { navTo } = uiStore
 
 const hasData = computed(() => selectedRecipes.value.length > 0)
 
 // Chart.js — Nutrition
-const chartCanvas = ref(null)
-let chartInstance = null
+const chartCanvas = ref<HTMLCanvasElement | null>(null)
+let chartInstance: Chart | null = null
 
 // Chart.js — Budget
-const budgetCanvas = ref(null)
-let budgetChartInstance = null
+const budgetCanvas = ref<HTMLCanvasElement | null>(null)
+let budgetChartInstance: Chart | null = null
 
 const macroSum = computed(
   () => nutritionTotals.value.prot + nutritionTotals.value.fat + nutritionTotals.value.carb || 1,

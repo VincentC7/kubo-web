@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * GroceryGroup — Molécule groupe d'ingrédients d'une recette
  * Intégré avec l'inventaire global et affiche les prix.
@@ -6,20 +6,27 @@
 import { computed } from 'vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { useInventoryStore } from '@/stores/inventoryStore'
+import { useUserStore } from '@/stores/userStore'
+import type { RecipeWithPrice, Ingredient } from '@/types/recipe'
 
-const props = defineProps({
-  recipe: { type: Object, required: true },
-  done: { type: Boolean, default: false },
-})
+const props = withDefaults(
+  defineProps<{
+    recipe: RecipeWithPrice
+    done?: boolean
+  }>(),
+  { done: false },
+)
 
-const store = useAppStore()
-const { portions } = storeToRefs(store)
-const { isInInventory, updateInventory, toggleRecipeIngredients } = store
+const inventoryStore = useInventoryStore()
+const { isInInventory, updateInventory, toggleRecipeIngredients } = inventoryStore
+
+const userStore = useUserStore()
+const { portions } = storeToRefs(userStore)
 
 const allChecked = computed(() => props.recipe.ingredients.every((ing) => isInInventory(ing.name)))
 
-function scaledPrice(ing) {
+function scaledPrice(ing: Ingredient): number {
   return ((ing.price || 0) / 2) * portions.value
 }
 </script>

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * RecipeDetailModal — Organisme modale de détail d'une recette
  */
@@ -7,12 +7,16 @@ import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboTag from '@/components/ui/KuboTag.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import MacroBar from '@/components/recipes/MacroBar.vue'
+import type { RecipeWithPrice } from '@/types/recipe'
 
-const props = defineProps({
-  recipe: { type: Object, default: null },
-  selected: { type: Boolean, default: false },
-})
-defineEmits(['close', 'toggle'])
+const props = withDefaults(
+  defineProps<{
+    recipe: RecipeWithPrice | null
+    selected?: boolean
+  }>(),
+  { recipe: null, selected: false },
+)
+defineEmits<{ close: []; toggle: [] }>()
 
 const macroTotal = computed(() => {
   if (!props.recipe) return 1

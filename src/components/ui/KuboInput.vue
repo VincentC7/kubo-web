@@ -1,15 +1,24 @@
-<script setup>
+<script setup lang="ts">
 /**
  * KuboInput — Atome champ de saisie
  */
-defineProps({
-  modelValue: { type: [String, Number], default: '' },
-  type: { type: String, default: 'text' },
-  placeholder: { type: String, default: '' },
-  label: { type: String, default: null },
-  icon: { type: String, default: null },
-})
-defineEmits(['update:modelValue'])
+withDefaults(
+  defineProps<{
+    modelValue?: string | number
+    type?: string
+    placeholder?: string
+    label?: string | null
+    icon?: string | null
+  }>(),
+  {
+    modelValue: '',
+    type: 'text',
+    placeholder: '',
+    label: null,
+    icon: null,
+  },
+)
+defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>
 
 <template>

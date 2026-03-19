@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * SettingsView — Vue paramètres : modules, objectifs, dark mode
  */
@@ -7,11 +7,20 @@ import KuboCard from '@/components/ui/KuboCard.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { useUiStore } from '@/stores/uiStore'
+import { useUserStore } from '@/stores/userStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
 
-const store = useAppStore()
-const { darkMode, showInventory, showGroceries, portions, mealsGoal } = storeToRefs(store)
-const { toggleDarkMode, notify, updatePortions, updateMealsGoal } = store
+const uiStore = useUiStore()
+const { darkMode } = storeToRefs(uiStore)
+const { toggleDarkMode, notify } = uiStore
+
+const userStore = useUserStore()
+const { portions, mealsGoal } = storeToRefs(userStore)
+const { updatePortions, updateMealsGoal } = userStore
+
+const inventoryStore = useInventoryStore()
+const { showInventory, showGroceries } = storeToRefs(inventoryStore)
 
 const localShowInventory = ref(showInventory.value)
 const localShowGroceries = ref(showGroceries.value)
@@ -23,9 +32,9 @@ watch(showGroceries, (v) => {
   localShowGroceries.value = v
 })
 
-function save() {
-  showInventory.value = localShowInventory.value
-  showGroceries.value = localShowGroceries.value
+function save(): void {
+  inventoryStore.showInventory = localShowInventory.value
+  inventoryStore.showGroceries = localShowGroceries.value
   notify('Paramètres sauvegardés')
 }
 </script>

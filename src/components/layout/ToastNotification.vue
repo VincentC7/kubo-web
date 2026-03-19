@@ -1,7 +1,7 @@
-<script setup>
+<script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
-const { toastMessage, toastVisible } = storeToRefs(useAppStore())
+import { useUiStore } from '@/stores/uiStore'
+const { toastMessage, toastVisible } = storeToRefs(useUiStore())
 </script>
 
 <template>

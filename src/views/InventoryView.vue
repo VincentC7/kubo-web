@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * InventoryView — Vue inventaire des ingrédients en stock
  */
@@ -6,14 +6,27 @@ import { computed } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { useInventoryStore } from '@/stores/inventoryStore'
+import { usePlanningStore } from '@/stores/planningStore'
+import { useUiStore } from '@/stores/uiStore'
+import type { Ingredient } from '@/types/recipe'
 
-const store = useAppStore()
-const { inventory, selectedRecipes } = storeToRefs(store)
-const { updateInventory, notify, isInInventory } = store
+const inventoryStore = useInventoryStore()
+const { inventory } = storeToRefs(inventoryStore)
+const { updateInventory, isInInventory } = inventoryStore
 
-const missingIngredients = computed(() => {
-  const missing = []
+const planningStore = usePlanningStore()
+const { selectedRecipes } = storeToRefs(planningStore)
+
+const uiStore = useUiStore()
+const { notify } = uiStore
+
+interface MissingIngredient extends Ingredient {
+  recipeName: string
+}
+
+const missingIngredients = computed<MissingIngredient[]>(() => {
+  const missing: MissingIngredient[] = []
   selectedRecipes.value.forEach((recipe) => {
     recipe.ingredients.forEach((ing) => {
       if (!isInInventory(ing.name) && !missing.find((m) => m.name === ing.name)) {
@@ -24,12 +37,12 @@ const missingIngredients = computed(() => {
   return missing
 })
 
-function removeItem(item) {
+function removeItem(item: Ingredient): void {
   updateInventory(item, false)
   notify(`${item.name} retiré du stock`)
 }
 
-function addMissing(item) {
+function addMissing(item: Ingredient): void {
   updateInventory(item, true)
   notify(`${item.name} ajouté au stock`)
 }

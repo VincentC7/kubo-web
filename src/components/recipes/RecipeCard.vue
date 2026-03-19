@@ -1,15 +1,19 @@
-<script setup>
+<script setup lang="ts">
 /**
  * RecipeCard — Molécule carte de recette dans le catalogue
  */
 import KuboTag from '@/components/ui/KuboTag.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
+import type { RecipeWithPrice } from '@/types/recipe'
 
-defineProps({
-  recipe: { type: Object, required: true },
-  selected: { type: Boolean, default: false },
-})
-defineEmits(['select', 'toggle'])
+withDefaults(
+  defineProps<{
+    recipe: RecipeWithPrice
+    selected?: boolean
+  }>(),
+  { selected: false },
+)
+defineEmits<{ select: []; toggle: [] }>()
 </script>
 
 <template>

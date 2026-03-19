@@ -1,18 +1,28 @@
-<script setup>
+<script setup lang="ts">
 /**
  * KuboButton — Atome bouton polyvalent
  * Variantes : primary | secondary | ghost | danger | dark
  * Tailles : sm | md | lg
  */
-defineProps({
-  variant: { type: String, default: 'primary' },
-  size: { type: String, default: 'md' },
-  icon: { type: String, default: null },
-  loading: { type: Boolean, default: false },
-  disabled: { type: Boolean, default: false },
-  fullWidth: { type: Boolean, default: false },
-})
-defineEmits(['click'])
+withDefaults(
+  defineProps<{
+    variant?: string
+    size?: string
+    icon?: string | null
+    loading?: boolean
+    disabled?: boolean
+    fullWidth?: boolean
+  }>(),
+  {
+    variant: 'primary',
+    size: 'md',
+    icon: null,
+    loading: false,
+    disabled: false,
+    fullWidth: false,
+  },
+)
+defineEmits<{ click: [event: MouseEvent] }>()
 </script>
 
 <template>

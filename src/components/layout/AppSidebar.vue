@@ -1,16 +1,30 @@
-<script setup>
+<script setup lang="ts">
 /**
  * AppSidebar — Organisme navigation principale
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.js'
+import { useUiStore } from '@/stores/uiStore'
+import { useUserStore } from '@/stores/userStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
 
-const store = useAppStore()
-const { currentView, sidebarCollapsed, user, showInventory, showGroceries } = storeToRefs(store)
-const { navTo, toggleSidebar } = store
+const uiStore = useUiStore()
+const { currentView, sidebarCollapsed } = storeToRefs(uiStore)
+const { navTo, toggleSidebar } = uiStore
 
-const NAV_ITEMS = [
+const userStore = useUserStore()
+const { user } = storeToRefs(userStore)
+
+const inventoryStore = useInventoryStore()
+const { showInventory, showGroceries } = storeToRefs(inventoryStore)
+
+interface NavItem {
+  id: string
+  label: string
+  icon: string
+}
+
+const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Tableau de bord', icon: 'layout-dashboard' },
   { id: 'catalog', label: 'Recettes', icon: 'utensils' },
   { id: 'planning', label: 'Menu Hebdo', icon: 'calendar' },
@@ -18,7 +32,7 @@ const NAV_ITEMS = [
   { id: 'inventory', label: 'Inventaire', icon: 'box' },
 ]
 
-function isNavVisible(item) {
+function isNavVisible(item: NavItem): boolean {
   if (item.id === 'inventory') return showInventory.value
   if (item.id === 'groceries') return showGroceries.value
   return true

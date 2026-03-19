@@ -1,12 +1,19 @@
-<script setup>
+<script setup lang="ts">
 /**
  * KuboCard — Atome carte de surface avec shadow
  */
-defineProps({
-  rounded: { type: String, default: '2xl' }, // sm | md | lg | xl | 2xl | 3xl
-  dark: { type: Boolean, default: false },
-  noPad: { type: Boolean, default: false },
-})
+withDefaults(
+  defineProps<{
+    rounded?: string
+    dark?: boolean
+    noPad?: boolean
+  }>(),
+  {
+    rounded: '2xl',
+    dark: false,
+    noPad: false,
+  },
+)
 </script>
 
 <template>
