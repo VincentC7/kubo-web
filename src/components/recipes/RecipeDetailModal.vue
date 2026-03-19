@@ -13,8 +13,9 @@ const props = withDefaults(
   defineProps<{
     recipe: RecipeWithPrice | null
     selected?: boolean
+    loading?: boolean
   }>(),
-  { recipe: null, selected: false },
+  { recipe: null, selected: false, loading: false },
 )
 defineEmits<{ close: []; toggle: [] }>()
 
@@ -22,6 +23,8 @@ const macroTotal = computed(() => {
   if (!props.recipe) return 1
   return props.recipe.prot + props.recipe.fat + props.recipe.carb || 1
 })
+
+const hasDetail = computed(() => !props.loading && (props.recipe?.ingredients?.length ?? 0) > 0)
 </script>
 
 <template>
@@ -80,7 +83,12 @@ const macroTotal = computed(() => {
               <!-- Macros -->
               <div class="rdm__macros">
                 <p class="rdm__macros-title"><KuboIcon name="pie-chart" :size="12" /> Macros</p>
-                <div class="rdm__macros-bars">
+                <div v-if="loading" class="rdm__macros-bars">
+                  <div class="rdm__skeleton rdm__skeleton--bar" />
+                  <div class="rdm__skeleton rdm__skeleton--bar" />
+                  <div class="rdm__skeleton rdm__skeleton--bar" />
+                </div>
+                <div v-else class="rdm__macros-bars">
                   <MacroBar label="Protéines" :value="recipe.prot" :max="macroTotal" color="blue" />
                   <MacroBar label="Lipides" :value="recipe.fat" :max="macroTotal" color="orange" />
                   <MacroBar label="Glucides" :value="recipe.carb" :max="macroTotal" color="green" />
@@ -93,7 +101,10 @@ const macroTotal = computed(() => {
                   <KuboIcon name="list-checks" :size="18" class="rdm__section-icon" />
                   Ingrédients
                 </h3>
-                <div class="rdm__ingredients">
+                <div v-if="!hasDetail" class="rdm__ingredients">
+                  <div v-for="n in 6" :key="n" class="rdm__skeleton rdm__skeleton--ingredient" />
+                </div>
+                <div v-else class="rdm__ingredients">
                   <div v-for="ing in recipe.ingredients" :key="ing.name" class="rdm__ingredient">
                     <div class="rdm__ing-icon">
                       <KuboIcon name="package" :size="16" />
@@ -110,7 +121,13 @@ const macroTotal = computed(() => {
                   <KuboIcon name="chef-hat" :size="18" class="rdm__section-icon" />
                   Préparation
                 </h3>
-                <div class="rdm__steps">
+                <div v-if="!hasDetail" class="rdm__steps">
+                  <div v-for="n in 3" :key="n" class="rdm__step">
+                    <div class="rdm__skeleton rdm__skeleton--step-num" />
+                    <div class="rdm__skeleton rdm__skeleton--step-text" />
+                  </div>
+                </div>
+                <div v-else class="rdm__steps">
                   <div v-for="(step, i) in recipe.steps" :key="i" class="rdm__step">
                     <div class="rdm__step-num">{{ i + 1 }}</div>
                     <p class="rdm__step-text">{{ step }}</p>
@@ -395,6 +412,52 @@ const macroTotal = computed(() => {
   margin-top: auto;
   padding-top: 20px;
   border-top: 1px solid var(--kubo-border);
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.rdm__skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--kubo-surface-mute) 25%,
+    var(--kubo-border) 50%,
+    var(--kubo-surface-mute) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+.rdm__skeleton--bar {
+  flex: 1;
+  height: 52px;
+  border-radius: var(--radius-md);
+}
+
+.rdm__skeleton--ingredient {
+  height: 56px;
+  border-radius: var(--radius-md);
+}
+
+.rdm__skeleton--step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.rdm__skeleton--step-text {
+  flex: 1;
+  height: 56px;
+  border-radius: var(--radius-md);
 }
 
 /* Transitions */

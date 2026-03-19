@@ -8,6 +8,10 @@ export const useRecipeStore = defineStore('recipe', () => {
   // ---- State ----
   const recipes = ref<RecipeListItem[]>([])
   const loading = ref(true)
+  const loadingDetailId = ref<string | null>(null)
+
+  // Cache détail : id → recette enrichie (évite les double-appels)
+  const detailCache = new Map<string, RecipeListItem>()
 
   const filters = reactive({
     category: 'Tout',
@@ -104,9 +108,30 @@ export const useRecipeStore = defineStore('recipe', () => {
     }
   }
 
+  async function fetchDetail(id: string): Promise<void> {
+    // Déjà en cache → on patche immédiatement, pas d'appel réseau
+    if (detailCache.has(id)) {
+      const cached = detailCache.get(id)!
+      const idx = recipes.value.findIndex((r) => r.id === id)
+      if (idx !== -1) Object.assign(recipes.value[idx], cached)
+      return
+    }
+
+    loadingDetailId.value = id
+    try {
+      const detail = await recipeService.getRecipeById(id)
+      detailCache.set(id, detail)
+      const idx = recipes.value.findIndex((r) => r.id === id)
+      if (idx !== -1) Object.assign(recipes.value[idx], detail)
+    } finally {
+      loadingDetailId.value = null
+    }
+  }
+
   return {
     recipes,
     loading,
+    loadingDetailId,
     filters,
     catalogLoading,
     catalogHasMore,
@@ -121,5 +146,6 @@ export const useRecipeStore = defineStore('recipe', () => {
     resetFilters,
     init,
     loadMoreRecipes,
+    fetchDetail,
   }
 })

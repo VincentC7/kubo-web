@@ -17,8 +17,9 @@ import { useUiStore } from '@/stores/uiStore'
 import type { RecipeWithPrice } from '@/types/recipe'
 
 const recipeStore = useRecipeStore()
-const { filteredRecipes, filters, catalogLoading, catalogHasMore } = storeToRefs(recipeStore)
-const { setSearch, loadMoreRecipes } = recipeStore
+const { filteredRecipes, filters, catalogLoading, catalogHasMore, loadingDetailId } =
+  storeToRefs(recipeStore)
+const { setSearch, loadMoreRecipes, fetchDetail } = recipeStore
 
 const planningStore = usePlanningStore()
 const { selectedRecipes } = storeToRefs(planningStore)
@@ -37,6 +38,7 @@ let observer: IntersectionObserver | null = null
 
 function openDetail(recipe: RecipeWithPrice): void {
   detailRecipe.value = recipe
+  fetchDetail(recipe.id)
 }
 
 function closeDetail(): void {
@@ -141,6 +143,7 @@ onBeforeUnmount(() => {
     <RecipeDetailModal
       :recipe="detailRecipe"
       :selected="detailRecipe ? isSelected(detailRecipe.id) : false"
+      :loading="loadingDetailId === detailRecipe?.id"
       @close="closeDetail"
       @toggle="handleModalToggle"
     />
