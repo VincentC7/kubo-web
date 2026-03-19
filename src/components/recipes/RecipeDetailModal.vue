@@ -2,7 +2,7 @@
 /**
  * RecipeDetailModal — Fiche recette verticale : hero image + contenu scrollable
  */
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboTag from '@/components/ui/KuboTag.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
@@ -25,6 +25,14 @@ const macroTotal = computed(() => {
 })
 
 const hasDetail = computed(() => !props.loading && (props.recipe?.ingredients?.length ?? 0) > 0)
+
+const imgError = ref(false)
+watch(
+  () => props.recipe?.id,
+  () => {
+    imgError.value = false
+  },
+)
 </script>
 
 <template>
@@ -39,7 +47,16 @@ const hasDetail = computed(() => !props.loading && (props.recipe?.ingredients?.l
         <div class="rdm">
           <!-- ── Hero image ── -->
           <div class="rdm__hero">
-            <img :src="recipe.img" :alt="recipe.title" class="rdm__hero-img" />
+            <img
+              v-if="!imgError"
+              :src="recipe.img"
+              :alt="recipe.title"
+              class="rdm__hero-img"
+              @error="imgError = true"
+            />
+            <div v-else class="rdm__hero-fallback" aria-hidden="true">
+              <KuboIcon name="chef-hat" :size="56" />
+            </div>
             <div class="rdm__hero-gradient" />
 
             <!-- Titre sur l'image -->
@@ -219,6 +236,16 @@ const hasDetail = computed(() => !props.loading && (props.recipe?.ingredients?.l
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.rdm__hero-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--kubo-text-muted);
+  background: var(--kubo-surface-mute);
 }
 
 .rdm__hero-gradient {
