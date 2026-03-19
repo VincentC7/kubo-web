@@ -2,7 +2,7 @@
 /**
  * CatalogView — Vue catalogue des recettes
  */
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboInput from '@/components/ui/KuboInput.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
@@ -17,8 +17,14 @@ import { useUiStore } from '@/stores/uiStore'
 import type { RecipeWithPrice } from '@/types/recipe'
 
 const recipeStore = useRecipeStore()
-const { filteredRecipes, filters, catalogLoading, catalogHasMore, loadingDetailId } =
-  storeToRefs(recipeStore)
+const {
+  recipesWithPrice,
+  filteredRecipes,
+  filters,
+  catalogLoading,
+  catalogHasMore,
+  loadingDetailId,
+} = storeToRefs(recipeStore)
 const { setSearch, loadMoreRecipes, fetchDetail } = recipeStore
 
 const planningStore = usePlanningStore()
@@ -32,17 +38,21 @@ const uiStore = useUiStore()
 const { notify } = uiStore
 
 const filterOpen = ref(false)
-const detailRecipe = ref<RecipeWithPrice | null>(null)
+const detailId = ref<string | null>(null)
+// Toujours lire depuis recipesWithPrice (non filtré) pour recevoir les mises à jour du store
+const detailRecipe = computed<RecipeWithPrice | null>(
+  () => recipesWithPrice.value.find((r) => r.id === detailId.value) ?? null,
+)
 const sentinel = ref<HTMLDivElement | null>(null)
 let observer: IntersectionObserver | null = null
 
 function openDetail(recipe: RecipeWithPrice): void {
-  detailRecipe.value = recipe
+  detailId.value = recipe.id
   fetchDetail(recipe.id)
 }
 
 function closeDetail(): void {
-  detailRecipe.value = null
+  detailId.value = null
 }
 
 function handleToggle(recipe: RecipeWithPrice): void {
