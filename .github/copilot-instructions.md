@@ -3,152 +3,222 @@
 ## Contexte du projet
 
 **kubo-web** est le frontend d'une application de **gestion alimentaire personnelle**.  
-C'est une Single Page Application (SPA) développée avec **Vue 3** et **Vite 7**.
+C'est une Single Page Application (SPA) développée avec **Vue 3**, **Vite 7** et **TypeScript**.
 
 ### Domaine métier
+
 L'application permet à l'utilisateur de :
-- **Gérer ses recettes** : création, édition, suppression, tags, catégories, notation
-- **Planifier ses repas** : planning hebdomadaire (petit-déjeuner, déjeuner, dîner), gestion des portions
-- **Gérer sa liste de courses** : génération automatique depuis le planning, regroupement par catégorie, estimation de coût
-- **Gérer son garde-manger** : inventaire des ingrédients, suggestions de recettes selon les stocks, alertes de péremption
-- **Suivre son équilibre nutritionnel** _(optionnel)_ : apports par repas/journée, indicateurs d'équilibre
 
-### Entités métier principales
-- `Recette` : nom, description, catégorie, tags, portions, temps de préparation, ingrédients, note
-- `Ingredient` : nom, catégorie (légume, viande, épicerie…), unité par défaut
-- `PlanningRepas` : semaine, jour, moment (matin/midi/soir), recette associée, nombre de personnes
-- `ListeCourses` : générée depuis un planning, ingrédients groupés par catégorie, statut coché/non coché
-- `GardeManger` : stock d'ingrédients disponibles, quantités, dates de péremption
-
-Le projet utilise uniquement la **Composition API** avec `<script setup>`.  
-Il n'y a pas de routeur (Vue Router) ni de store (Pinia/Vuex) installés **pour l'instant**, mais leur ajout est prévu.  
-Le code source est en **JavaScript** (pas TypeScript).
+- **Gérer ses recettes** : catalogue, filtres, tags, catégories, prix estimé par portion
+- **Planifier ses repas** : planning hebdomadaire, sélection/désélection de recettes, marquage "fait"
+- **Gérer sa liste de courses** : génération automatique depuis le planning, regroupement par recette, total estimé
+- **Gérer son inventaire** : stock d'ingrédients, ingrédients manquants par rapport au menu
+- **Suivre son équilibre nutritionnel** : répartition protéines/lipides/glucides, progression, budget
 
 ---
 
 ## Stack & versions
 
-- **Vue** : `^3.5.29`
-- **Vite** : `^7.3.1`
-- **Node.js** : `^20.19.0 || >=22.12.0`
-- **Module system** : ESM natif (`"type": "module"` dans `package.json`)
+| Outil             | Version                        |
+| ----------------- | ------------------------------ |
+| **Vue**           | `^3.5.29`                      |
+| **Vite**          | `^7.3.1`                       |
+| **TypeScript**    | `^5.x` (via `vue-tsc`)         |
+| **Pinia**         | `^3.x`                         |
+| **Axios**         | présent via `httpClient.ts`    |
+| **Chart.js**      | utilisé dans `DashboardView`   |
+| **Node.js**       | `^20.19.0 \|\| >=22.12.0`      |
+| **Module system** | ESM natif (`"type": "module"`) |
 
-Ne jamais suggérer de syntaxes ou d'APIs liées à Vue 2, Webpack, ou CommonJS.
+Ne jamais suggérer de syntaxes ou d'APIs liées à Vue 2, Webpack, CommonJS ou Vuex.
 
 ---
 
-## Conventions Vue 3
+## Conventions Vue 3 + TypeScript
 
-### Composition API
-- Toujours utiliser `<script setup>` — ne jamais utiliser l'Options API ni `defineComponent()`.
-- Déclarer les props avec `defineProps({})`.
-- Déclarer les événements émis avec `defineEmits([])` ou `defineEmits({})`.
-- Utiliser `ref()` et `reactive()` pour la réactivité.
-- Préférer `computed()` aux getters calculés dans le template.
+### Script
+
+- Toujours utiliser `<script setup lang="ts">` — ne jamais utiliser l'Options API ni `defineComponent()`.
+- Déclarer les props avec `defineProps<{...}>()` (générique TypeScript).
+- Déclarer les émissions avec `defineEmits<{...}>()` (générique TypeScript).
+- Typer explicitement tous les `ref()` : `ref<Type>(valeur)`.
+- Préférer `computed()` aux calculs dans le template.
 
 ### Nommage
+
 - Fichiers de composants : **PascalCase** (ex. `RecipeCard.vue`).
 - Référencer les composants dans les templates en **PascalCase** (ex. `<RecipeCard />`).
-- Composants d'icônes : préfixe `Icon` + nom en PascalCase, placés dans `src/components/icons/` (ex. `IconRecipe.vue`).
+- Composants d'icônes : `KuboIcon` avec prop `name` (voir `src/components/ui/KuboIcon.vue`).
 - Un seul composant par fichier `.vue`.
 
 ### Ordre dans un SFC
+
 Respecter systématiquement l'ordre suivant dans tout fichier `.vue` :
-1. `<script setup>`
+
+1. `<script setup lang="ts">`
 2. `<template>`
 3. `<style scoped>`
 
 ---
 
-## Structure cible de `src/`
+## Structure de `src/`
 
 ```
 src/
-├── main.js
+├── main.ts
 ├── App.vue
 ├── assets/
-│   ├── base.css          # Variables CSS globales
-│   └── main.css          # Styles globaux
+│   ├── base.css              # Variables CSS globales (--kubo-*)
+│   └── main.css              # Styles globaux
+├── types/                    # Types TypeScript partagés
+│   ├── recipe.ts             # Ingredient, RecipeListItem, RecipeWithPrice
+│   ├── user.ts               # User, Settings
+│   └── planning.ts           # WeekEntry, WeeklyData
+├── services/                 # Accès données (API réelle ou mock)
+│   ├── httpClient.ts         # Instance axios (VITE_API_BASE_URL)
+│   ├── recipeService.ts      # getRecipes(), getRecipeById()  ← API réelle /api/recettes
+│   ├── userService.ts        # getUser(), saveUser()          ← mock
+│   ├── settingsService.ts    # getSettings(), saveSettings()  ← mock
+│   ├── planningService.ts    # getPlanning(), savePlanning()  ← mock
+│   └── inventoryService.ts   # getInventory(), saveInventory() ← mock
+├── stores/                   # Pinia Setup Stores (un par domaine)
+│   ├── uiStore.ts            # navigation, sidebar, darkMode, toast
+│   ├── userStore.ts          # user, portions, mealsGoal, viewMode
+│   ├── recipeStore.ts        # recipes, pagination, filtres
+│   ├── planningStore.ts      # weeklyData, selectedRecipes, helpers semaine
+│   └── inventoryStore.ts     # inventory, showInventory, showGroceries, progress
 ├── components/
-│   ├── icons/            # Composants d'icônes (IconXxx.vue)
-│   ├── recipes/          # Composants liés aux recettes
-│   ├── planning/         # Composants liés au planning de repas
-│   ├── shopping/         # Composants liés à la liste de courses
-│   └── pantry/           # Composants liés au garde-manger
-├── views/                # Pages/vues (avec Vue Router)
-│   ├── RecipesView.vue
-│   ├── PlanningView.vue
-│   ├── ShoppingView.vue
-│   └── PantryView.vue
-├── stores/               # Stores Pinia (un fichier par domaine)
-│   ├── recipes.js
-│   ├── planning.js
-│   ├── shopping.js
-│   └── pantry.js
-├── composables/          # Composables réutilisables (useXxx.js)
-└── services/             # Appels API / logique d'accès aux données
+│   ├── layout/
+│   │   ├── AppHeader.vue
+│   │   ├── AppSidebar.vue
+│   │   └── ToastNotification.vue
+│   ├── recipes/
+│   │   ├── RecipeCard.vue
+│   │   ├── RecipeDetailModal.vue
+│   │   ├── FilterModal.vue
+│   │   ├── MacroBar.vue
+│   │   └── NutritionLegendItem.vue
+│   ├── planning/
+│   │   └── PlanningCard.vue
+│   ├── shopping/
+│   │   └── GroceryGroup.vue
+│   └── ui/                   # Design system Kubo
+│       ├── KuboButton.vue
+│       ├── KuboCard.vue
+│       ├── KuboIcon.vue      # Icônes SVG inline (prop: name, size)
+│       ├── KuboInput.vue
+│       ├── KuboProgressBar.vue
+│       └── KuboTag.vue
+└── views/
+    ├── DashboardView.vue     # uiStore + userStore + planningStore
+    ├── CatalogView.vue       # recipeStore + planningStore + userStore + uiStore
+    ├── PlanningView.vue      # planningStore + uiStore
+    ├── GroceriesView.vue     # planningStore
+    ├── InventoryView.vue     # inventoryStore + planningStore + uiStore
+    └── SettingsView.vue      # uiStore + userStore + inventoryStore
 ```
-
-> Cette structure est la cible à atteindre. Ne pas créer de dossiers vides d'avance, les ajouter au fur et à mesure.
 
 ---
 
-## Conventions de style CSS
+## Stores — règles d'utilisation
 
-- Utiliser `<style scoped>` dans chaque composant — ne jamais omettre l'attribut `scoped`.
-- CSS natif uniquement (pas de Tailwind, pas de SCSS/SASS, pas de CSS-in-JS) sauf décision explicite.
-- Les variables CSS globales et le reset sont définis dans `src/assets/base.css` — réutiliser ces variables plutôt que d'en redéfinir.
-- Les styles globaux sont dans `src/assets/main.css`.
+- **Pas de store racine orchestrateur** : chaque store est importé directement là où il est nécessaire.
+- Utiliser `storeToRefs()` pour destructurer les propriétés réactives (state + computed).
+- Destructurer les actions directement depuis l'instance du store (pas de `storeToRefs` pour les fonctions).
+
+```ts
+// ✅ Correct
+const planningStore = usePlanningStore()
+const { selectedRecipes, totalPrice } = storeToRefs(planningStore)
+const { toggleRecipe, isDone } = planningStore
+
+// ❌ À éviter
+const store = useAppStore() // appStore.js n'existe plus
+```
+
+- `showInventory` et `showGroceries` vivent dans **`inventoryStore`**, pas dans `userStore`.
+- `mealsGoal` et `portions` vivent dans **`userStore`**.
+- `notify()`, `navTo()`, `darkMode`, `toggleDarkMode()` vivent dans **`uiStore`**.
+
+---
+
+## Services — règles d'utilisation
+
+- Les services sont appelés uniquement depuis les stores (dans les actions `init()` ou autres).
+- Ne jamais appeler un service directement depuis un composant ou une vue.
+- `httpClient.ts` exporte une instance axios configurée avec `VITE_API_BASE_URL`.
+- En développement, `VITE_API_BASE_URL` doit être une chaîne vide dans `.env.local` pour utiliser le proxy Vite (évite les erreurs CORS).
+
+---
+
+## Types partagés
+
+Les types sont dans `src/types/`. Les importer avec `import type` :
+
+```ts
+import type { RecipeWithPrice, Ingredient } from '@/types/recipe'
+import type { WeekEntry } from '@/types/planning'
+import type { User, Settings } from '@/types/user'
+```
 
 ---
 
 ## Imports & chemins
 
 - Toujours utiliser l'alias `@` pour les imports depuis `src/` :
-  ```js
-  // ✅ Correct
-  import RecipeCard from '@/components/recipes/RecipeCard.vue'
-  import { useRecipes } from '@/composables/useRecipes.js'
 
-  // ❌ À éviter
-  import RecipeCard from '../../components/RecipeCard.vue'
-  ```
+```ts
+// ✅ Correct
+import RecipeCard from '@/components/recipes/RecipeCard.vue'
+import { useRecipeStore } from '@/stores/recipeStore'
+import type { RecipeWithPrice } from '@/types/recipe'
+
+// ❌ À éviter
+import RecipeCard from '../../components/RecipeCard.vue'
+```
+
 - Ne jamais utiliser de chemins relatifs remontants (`../..`).
+- Ne jamais importer depuis `appStore.js`, `api.js`, `httpClient.js` ou `useApp.js` — ces fichiers n'existent plus.
 
 ---
 
-## Structure des fichiers & assets
+## Conventions de style CSS
 
-| Type d'asset | Emplacement |
-|---|---|
-| Assets référencés dans le code (importés) | `src/assets/` |
-| Assets statiques non importés (favicon, robots.txt…) | `public/` |
-| Composants d'interface | `src/components/` |
-| Composants d'icônes | `src/components/icons/` |
-| Pages / vues (Vue Router) | `src/views/` |
-| Stores (Pinia) | `src/stores/` |
-| Composables | `src/composables/` |
-| Accès API / données | `src/services/` |
+- Utiliser `<style scoped>` dans chaque composant — ne jamais omettre `scoped`.
+- CSS natif uniquement (pas de Tailwind, pas de SCSS, pas de CSS-in-JS).
+- Réutiliser les variables CSS globales définies dans `src/assets/base.css` (préfixe `--kubo-`).
+- Ne pas redéfinir de variables déjà existantes.
 
 ---
 
 ## Configuration Vite
 
-- Ne pas modifier `vite.config.js` sans raison — les plugins `@vitejs/plugin-vue` et `vite-plugin-vue-devtools` sont déjà configurés.
-- L'alias `@` → `src/` est défini dans `vite.config.js`, ne pas le redéfinir ailleurs.
+- Ne pas modifier `vite.config.ts` sans raison — `@vitejs/plugin-vue` et `vite-plugin-vue-devtools` sont déjà configurés.
+- L'alias `@` → `src/` est défini dans `vite.config.ts`.
+
+---
+
+## Commande de build
+
+```bash
+npm run build
+# équivaut à : vue-tsc --noEmit && vite build
+```
+
+Le build doit passer avec **0 erreur TypeScript** avant tout commit.
 
 ---
 
 ## Ce qu'il faut éviter
 
-| ❌ À éviter | Raison |
-|---|---|
-| Options API (`data()`, `methods`, `computed` comme objet) | Le projet utilise exclusivement `<script setup>` |
-| `this` dans les composants | Inutile avec `<script setup>` |
-| `require()` | Projet ESM natif, utiliser `import` |
-| `import { createRouter } from 'vue-router'` | Vue Router n'est pas encore installé |
-| `import { createPinia } from 'pinia'` | Pinia n'est pas encore installé |
-| `import Vuex from 'vuex'` | Vuex n'est pas utilisé dans Vue 3 |
-| Chemins relatifs remontants (`../../`) | Utiliser l'alias `@` |
-| CSS global dans un `<style>` sans `scoped` | Risque de fuite de styles |
-
+| ❌ À éviter                             | Raison                                                   |
+| --------------------------------------- | -------------------------------------------------------- |
+| `<script setup>` sans `lang="ts"`       | Tout le projet est en TypeScript                         |
+| Options API (`data()`, `methods`…)      | Exclusivement `<script setup lang="ts">`                 |
+| `this` dans les composants              | Inutile avec `<script setup>`                            |
+| `require()`                             | Projet ESM natif                                         |
+| `import { useAppStore }`                | `appStore.js` supprimé — utiliser les stores par domaine |
+| `import … from '@/services/api.js'`     | `api.js` supprimé — utiliser les services par domaine    |
+| Chemins relatifs remontants (`../../`)  | Utiliser l'alias `@`                                     |
+| CSS global dans `<style>` sans `scoped` | Risque de fuite de styles                                |
+| Appel de service depuis un composant    | Les services sont réservés aux stores                    |
