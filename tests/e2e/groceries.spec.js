@@ -2,7 +2,12 @@
  * groceries.spec.js — Tests de la vue liste de courses
  */
 import { test, expect } from '@playwright/test'
-import { waitForAppReady, navigateTo, addFirstRecipeToMenu } from './helpers.js'
+import {
+  waitForAppReady,
+  navigateTo,
+  addFirstRecipeToMenu,
+  addFirstRecipeWithDetail,
+} from './helpers.js'
 
 test.describe('Courses — état vide', () => {
   test.beforeEach(async ({ page }) => {
@@ -24,7 +29,8 @@ test.describe('Courses — avec recettes', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await waitForAppReady(page)
-    await addFirstRecipeToMenu(page)
+    // Charger le détail pour avoir les ingrédients disponibles dans les courses
+    await addFirstRecipeWithDetail(page)
     await navigateTo(page, 'groceries')
   })
 
@@ -42,8 +48,29 @@ test.describe('Courses — avec recettes', () => {
   })
 
   test('affiche les ingrédients de la recette', async ({ page }) => {
-    // On cible les labels (checkbox + nom d'ingrédient) dans les groupes
     const items = page.locator('.gg label')
     await expect(items.first()).toBeVisible()
+  })
+
+  test('affiche le prix total des courses', async ({ page }) => {
+    await expect(page.getByTestId('groceries-total-price')).toBeVisible()
+    await expect(page.getByTestId('groceries-total-price')).toContainText('€')
+  })
+
+  test("cocher un ingrédient met à jour le stock dans l'inventaire", async ({ page }) => {
+    const firstCheckbox = page.locator('.gg__checkbox').first()
+    await firstCheckbox.check()
+    await navigateTo(page, 'inventory')
+    await expect(page.getByTestId('inventory-count')).not.toContainText('0')
+  })
+
+  test('tout cocher via le bouton "Tout cocher" ajoute tous les ingrédients au stock', async ({
+    page,
+  }) => {
+    // Clic sur le bouton "Tout cocher" du premier groupe
+    const toggleAllBtn = page.locator('.gg').first().locator('button').first()
+    await toggleAllBtn.click()
+    await navigateTo(page, 'inventory')
+    await expect(page.getByTestId('inventory-count')).not.toContainText('0')
   })
 })

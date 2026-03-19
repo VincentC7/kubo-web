@@ -2,7 +2,12 @@
  * inventory.spec.js — Tests de la vue inventaire
  */
 import { test, expect } from '@playwright/test'
-import { waitForAppReady, navigateTo, addFirstRecipeToMenu } from './helpers.js'
+import {
+  waitForAppReady,
+  navigateTo,
+  addFirstRecipeToMenu,
+  addFirstRecipeWithDetail,
+} from './helpers.js'
 
 test.describe('Inventaire — état vide', () => {
   test.beforeEach(async ({ page }) => {
@@ -28,7 +33,7 @@ test.describe('Inventaire — avec recettes planifiées', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await waitForAppReady(page)
-    await addFirstRecipeToMenu(page)
+    await addFirstRecipeWithDetail(page)
     await navigateTo(page, 'inventory')
   })
 
@@ -39,8 +44,13 @@ test.describe('Inventaire — avec recettes planifiées', () => {
   test('peut ajouter un ingrédient manquant au stock', async ({ page }) => {
     const missingItem = page.locator('.inventory__item--missing').first()
     await missingItem.locator('button').click()
-    // Le compteur doit augmenter
     await expect(page.getByTestId('inventory-count')).not.toContainText('0')
+  })
+
+  test("affiche un toast après ajout d'un ingrédient manquant", async ({ page }) => {
+    const missingItem = page.locator('.inventory__item--missing').first()
+    await missingItem.locator('button').click()
+    await expect(page.locator('.toast')).toBeVisible()
   })
 })
 
@@ -48,7 +58,7 @@ test.describe('Inventaire — via les courses', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await waitForAppReady(page)
-    await addFirstRecipeToMenu(page)
+    await addFirstRecipeWithDetail(page)
     // Cocher un ingrédient depuis les courses
     await navigateTo(page, 'groceries')
     const firstCheckbox = page.locator('.gg__checkbox').first()

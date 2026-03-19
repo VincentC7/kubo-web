@@ -2,7 +2,12 @@
  * dashboard.spec.js — Tests du tableau de bord nutritionnel
  */
 import { test, expect } from '@playwright/test'
-import { waitForAppReady, navigateTo, addFirstRecipeToMenu } from './helpers.js'
+import {
+  waitForAppReady,
+  navigateTo,
+  addFirstRecipeToMenu,
+  addFirstRecipeWithDetail,
+} from './helpers.js'
 
 test.describe('Dashboard — etat vide', () => {
   test.beforeEach(async ({ page }) => {
@@ -53,6 +58,44 @@ test.describe('Dashboard — avec recettes', () => {
   test('la barre de progression dans le header reflete les recettes cuisinees', async ({
     page,
   }) => {
-    await expect(page.locator('.app-header__progress-text')).toContainText('0/5')
+    // La progression indique 0 cochés / N ingrédients (N > 0 car détail chargé via addFirstRecipeWithDetail)
+    // On vérifie le format "0/N" avec N > 0
+    // Note : addFirstRecipeToMenu (sans détail) → N=0, on doit recharger avec détail
+    await page.goto('/')
+    await waitForAppReady(page)
+    await addFirstRecipeWithDetail(page)
+    await navigateTo(page, 'dashboard')
+    const text = await page.locator('.app-header__progress-text').textContent()
+    expect(text).toMatch(/^0\/\d+$/)
+    const total = parseInt(text?.split('/')[1] ?? '0', 10)
+    expect(total).toBeGreaterThan(0)
+  })
+
+  test('affiche le prix total de la période', async ({ page }) => {
+    await expect(page.getByTestId('dash-total-price')).toBeVisible()
+    await expect(page.getByTestId('dash-total-price')).toContainText('€')
+  })
+
+  test('affiche le prix moyen par repas', async ({ page }) => {
+    await expect(page.locator('.dashboard__stat-mini-value').first()).toContainText('€')
+  })
+
+  test('les boutons de mode vue sont affichés (semaine / mois / année)', async ({ page }) => {
+    const btns = page.locator('.dashboard__view-btn')
+    await expect(btns).toHaveCount(3)
+  })
+
+  test('peut basculer sur le mode mois', async ({ page }) => {
+    await page.locator('.dashboard__view-btn').nth(1).click()
+    await expect(page.locator('.dashboard__view-btn--active').nth(0)).toContainText('Mois')
+  })
+
+  test('peut basculer sur le mode année', async ({ page }) => {
+    await page.locator('.dashboard__view-btn').nth(2).click()
+    await expect(page.locator('.dashboard__view-btn--active').nth(0)).toContainText('Année')
+  })
+
+  test('affiche le graphique budget', async ({ page }) => {
+    await expect(page.locator('.dashboard__budget-chart-wrap canvas')).toBeVisible()
   })
 })

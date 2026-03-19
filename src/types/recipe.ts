@@ -4,6 +4,11 @@ export interface Ingredient {
   price: number
 }
 
+export interface Step {
+  numero: number
+  instructions: string[]
+}
+
 export interface RecipeListItem {
   id: string
   title: string
@@ -18,7 +23,7 @@ export interface RecipeListItem {
   difficulty: string
   tags: string[]
   ingredients: Ingredient[]
-  steps: string[]
+  steps: Step[]
 }
 
 export interface RecipeWithPrice extends RecipeListItem {
@@ -51,7 +56,9 @@ export interface IngredientDto {
 }
 
 export interface EtapeDto {
+  numero: number
   instructions: string[]
+  astuce?: string | null
 }
 
 export interface NutritionDto {

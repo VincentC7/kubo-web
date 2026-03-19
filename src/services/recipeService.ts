@@ -46,7 +46,10 @@ function mapDetail(r: RecetteDetailDto): RecipeListItem {
     qty: [ing.quantite, ing.unite].filter(Boolean).join(' ') || (ing.raw ?? ''),
     price: 0,
   }))
-  const steps = toArray<EtapeDto>(r.etapes).flatMap((e) => e.instructions)
+  const steps = toArray<EtapeDto>(r.etapes).map((e) => ({
+    numero: e.numero,
+    instructions: e.instructions,
+  }))
 
   return {
     ...mapListItem(r),

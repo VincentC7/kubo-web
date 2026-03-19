@@ -160,15 +160,29 @@ watch(
                 Préparation
               </h3>
               <div v-if="!hasDetail" class="rdm__steps">
-                <div v-for="n in 3" :key="n" class="rdm__step">
-                  <div class="rdm__skeleton rdm__skeleton--step-num" />
-                  <div class="rdm__skeleton rdm__skeleton--step-text" />
+                <div v-for="n in 2" :key="n" class="rdm__step-block">
+                  <div class="rdm__skeleton rdm__skeleton--step-header" />
+                  <div class="rdm__step-instructions">
+                    <div class="rdm__skeleton rdm__skeleton--step-text" />
+                    <div class="rdm__skeleton rdm__skeleton--step-text" />
+                  </div>
                 </div>
               </div>
               <div v-else class="rdm__steps">
-                <div v-for="(step, i) in recipe.steps" :key="i" class="rdm__step">
-                  <div class="rdm__step-num">{{ i + 1 }}</div>
-                  <p class="rdm__step-text">{{ step }}</p>
+                <div v-for="step in recipe.steps" :key="step.numero" class="rdm__step-block">
+                  <div class="rdm__step-header">
+                    <div class="rdm__step-num">{{ step.numero }}</div>
+                    <span class="rdm__step-label">Étape {{ step.numero }}</span>
+                  </div>
+                  <ul class="rdm__step-instructions">
+                    <li
+                      v-for="(instruction, i) in step.instructions"
+                      :key="i"
+                      class="rdm__step-instruction"
+                    >
+                      {{ instruction }}
+                    </li>
+                  </ul>
                 </div>
               </div>
             </section>
@@ -498,12 +512,19 @@ watch(
 .rdm__steps {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
-.rdm__step {
+.rdm__step-block {
   display: flex;
-  gap: 14px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rdm__step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .rdm__step-num {
@@ -519,14 +540,40 @@ watch(
   justify-content: center;
   flex-shrink: 0;
   box-shadow: 0 3px 8px var(--kubo-green-shadow);
-  margin-top: 2px;
 }
 
-.rdm__step-text {
+.rdm__step-label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 800;
+  color: var(--kubo-text);
+}
+
+.rdm__step-instructions {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rdm__step-instruction {
+  font-size: 13px;
+  font-weight: 500;
   color: var(--kubo-text-muted);
-  line-height: 1.7;
+  line-height: 1.65;
+  padding-left: 14px;
+  position: relative;
+}
+.rdm__step-instruction::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--kubo-border-mid);
 }
 
 /* ── CTA sticky ── */
@@ -576,16 +623,16 @@ watch(
   height: 50px;
 }
 
-.rdm__skeleton--step-num {
-  width: 28px;
+.rdm__skeleton--step-header {
+  width: 90px;
   height: 28px;
-  border-radius: 50%;
-  flex-shrink: 0;
+  border-radius: var(--radius-md);
 }
 
 .rdm__skeleton--step-text {
-  flex: 1;
-  height: 52px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  margin-left: 38px;
 }
 
 /* ── Transitions ── */
