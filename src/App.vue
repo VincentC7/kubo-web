@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import AppBottomNav from '@/components/layout/AppBottomNav.vue'
 import ToastNotification from '@/components/layout/ToastNotification.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import CatalogView from '@/views/CatalogView.vue'
@@ -64,6 +65,9 @@ onMounted(async () => {
     </div>
 
     <ToastNotification />
+
+    <!-- Bottom nav mobile (< 768px) -->
+    <AppBottomNav class="app-shell__bottom-nav" />
   </div>
 </template>
 
@@ -97,6 +101,13 @@ onMounted(async () => {
 .app-shell__content {
   flex: 1;
   overflow-y: auto;
+}
+
+/* Sur mobile, laisser de la place pour la bottom nav */
+@media (max-width: 767px) {
+  .app-shell__content {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* Loader */
