@@ -1,7 +1,14 @@
+export type SeasonStatus =
+  | 'in' // de saison ce mois-ci
+  | 'ending' // de saison ce mois-ci, mais plus le mois prochain
+  | 'starting' // pas encore en saison, mais le sera le mois prochain
+  | 'out' // hors saison (plus d'un mois d'écart)
+
 export interface Ingredient {
   name: string
   qty: string
   price: number
+  seasonStatus?: SeasonStatus | null
 }
 
 export interface Step {
@@ -53,6 +60,8 @@ export interface IngredientDto {
   quantite: string | null
   unite: string | null
   raw?: string
+  type?: string
+  mois_saison?: number[] | null
 }
 
 export interface EtapeDto {

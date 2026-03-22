@@ -7,7 +7,7 @@ import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboTag from '@/components/ui/KuboTag.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import MacroBar from '@/components/recipes/MacroBar.vue'
-import type { RecipeWithPrice } from '@/types/recipe'
+import type { RecipeWithPrice, SeasonStatus } from '@/types/recipe'
 
 const props = withDefaults(
   defineProps<{
@@ -25,6 +25,13 @@ const macroTotal = computed(() => {
 })
 
 const hasDetail = computed(() => !props.loading && (props.recipe?.ingredients?.length ?? 0) > 0)
+
+const seasonTooltip: Record<SeasonStatus, string> = {
+  in: 'De saison ce mois-ci',
+  ending: 'De saison ce mois-ci, mais plus le mois prochain',
+  starting: 'Pas encore en saison, mais le sera le mois prochain',
+  out: 'Hors saison',
+}
 
 const imgError = ref(false)
 watch(
@@ -148,6 +155,13 @@ watch(
                     <KuboIcon name="package" :size="14" />
                   </div>
                   <span class="rdm__ing-name">{{ ing.name }}</span>
+                  <span
+                    v-if="ing.seasonStatus"
+                    :class="['rdm__season-icon', `rdm__season-icon--${ing.seasonStatus}`]"
+                    :data-tooltip="seasonTooltip[ing.seasonStatus]"
+                  >
+                    <KuboIcon name="leaf" :size="12" />
+                  </span>
                   <span v-if="ing.qty" class="rdm__ing-qty">{{ ing.qty }}</span>
                 </div>
               </div>
@@ -506,6 +520,75 @@ watch(
   padding: 2px 7px;
   border-radius: var(--radius-xs);
   white-space: nowrap;
+}
+
+/* ── Pictogramme saisonnalité ── */
+.rdm__season-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+/* Couleurs par statut */
+.rdm__season-icon--in {
+  color: #065f46;
+  background: #d1fae5;
+}
+.rdm__season-icon--ending {
+  color: #92400e;
+  background: #fef3c7;
+}
+.rdm__season-icon--starting {
+  color: #1e40af;
+  background: #dbeafe;
+}
+.rdm__season-icon--out {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+/* Tooltip CSS */
+.rdm__season-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--kubo-text);
+  color: var(--kubo-surface);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+/* Petite flèche */
+.rdm__season-icon::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--kubo-text);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+.rdm__season-icon:hover::after,
+.rdm__season-icon:hover::before {
+  opacity: 1;
 }
 
 /* ── Étapes ── */

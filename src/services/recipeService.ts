@@ -1,4 +1,5 @@
 import httpClient from './httpClient'
+import { getSeasonStatus } from '@/composables/useSeason'
 import type {
   RecipeListItem,
   RecipeWithPrice,
@@ -47,6 +48,7 @@ function mapDetail(r: RecetteDetailDto): RecipeListItem {
     name: ing.nom,
     qty: [ing.quantite, ing.unite].filter(Boolean).join(' ') || (ing.raw ?? ''),
     price: 0,
+    seasonStatus: getSeasonStatus(ing.mois_saison),
   }))
   const steps = toArray<EtapeDto>(r.etapes).map((e) => ({
     numero: e.numero,
