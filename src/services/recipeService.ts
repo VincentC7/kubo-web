@@ -9,6 +9,8 @@ import type {
   EtapeDto,
   NutritionDto,
   ApiListResponse,
+  CatalogueDto,
+  CatalogueResponse,
 } from '@/types/recipe'
 
 // ---- Helpers DTO ----
@@ -79,6 +81,20 @@ export const recipeService = {
   async getRecipeById(id: string): Promise<RecipeListItem> {
     const { data } = await httpClient.get<RecetteDetailDto>(`/api/recettes/${id}`)
     return mapDetail(data)
+  },
+
+  async getCatalogue(page = 1, limit = 20, week?: string): Promise<CatalogueResponse> {
+    const params: Record<string, string | number> = { page, limit }
+    if (week) params.week = week
+    const { data } = await httpClient.get<CatalogueDto>('/api/catalogue', { params })
+    const items = toArray<RecetteListItemDto>(data.recettes).map(mapListItem)
+    return {
+      items,
+      page: data.meta.page,
+      pages: data.meta.pages,
+      week: data.semaine,
+      selectionSize: data.meta.catalogue_size,
+    }
   },
 }
 export type { RecipeListItem, RecipeWithPrice, PaginatedResponse }

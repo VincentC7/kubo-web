@@ -1,6 +1,8 @@
 <script setup lang="ts">
 /**
  * CatalogView — Vue catalogue des recettes
+ * Section 1 : Sélection de la semaine (recettes scorées par l'API)
+ * Section 2 : Toutes les recettes (reste du catalogue, infinite scroll)
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
@@ -20,6 +22,8 @@ const recipeStore = useRecipeStore()
 const {
   recipesWithPrice,
   filteredRecipes,
+  weeklySelection,
+  currentWeek,
   filters,
   catalogLoading,
   catalogHasMore,
@@ -45,6 +49,13 @@ const detailRecipe = computed<RecipeWithPrice | null>(
 )
 const sentinel = ref<HTMLDivElement | null>(null)
 let observer: IntersectionObserver | null = null
+
+// Formate "2026-W12" → "Semaine 12"
+const weekLabel = computed(() => {
+  if (!currentWeek.value) return ''
+  const match = currentWeek.value.match(/W(\d+)$/)
+  return match ? `Semaine ${parseInt(match[1], 10)}` : currentWeek.value
+})
 
 function openDetail(recipe: RecipeWithPrice): void {
   detailId.value = recipe.id
@@ -124,23 +135,47 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <!-- Grid -->
-    <div v-if="filteredRecipes.length" class="catalog__grid" data-testid="recipe-grid">
-      <RecipeCard
-        v-for="recipe in filteredRecipes"
-        :key="recipe.id"
-        :recipe="recipe"
-        :selected="isSelected(recipe.id)"
-        @select="openDetail(recipe)"
-        @toggle="handleToggle(recipe)"
-      />
-    </div>
+    <!-- Section 1 : Sélection de la semaine -->
+    <section v-if="weeklySelection.length" class="catalog__section">
+      <div class="catalog__section-header">
+        <h2 class="catalog__section-title">Sélection de la semaine</h2>
+        <span v-if="weekLabel" class="catalog__week-badge">{{ weekLabel }}</span>
+      </div>
+      <div class="catalog__grid" data-testid="weekly-selection-grid">
+        <RecipeCard
+          v-for="recipe in weeklySelection"
+          :key="recipe.id"
+          :recipe="recipe"
+          :selected="isSelected(recipe.id)"
+          @select="openDetail(recipe)"
+          @toggle="handleToggle(recipe)"
+        />
+      </div>
+    </section>
 
-    <!-- Empty filtered state -->
-    <div v-else class="catalog__empty">
-      <KuboIcon name="search" :size="40" />
-      <p>Aucune recette ne correspond à vos filtres.</p>
-    </div>
+    <!-- Section 2 : Toutes les recettes -->
+    <section class="catalog__section">
+      <div class="catalog__section-header">
+        <h2 class="catalog__section-title">Toutes les recettes</h2>
+      </div>
+
+      <div v-if="filteredRecipes.length" class="catalog__grid" data-testid="recipe-grid">
+        <RecipeCard
+          v-for="recipe in filteredRecipes"
+          :key="recipe.id"
+          :recipe="recipe"
+          :selected="isSelected(recipe.id)"
+          @select="openDetail(recipe)"
+          @toggle="handleToggle(recipe)"
+        />
+      </div>
+
+      <!-- Empty filtered state -->
+      <div v-else class="catalog__empty">
+        <KuboIcon name="search" :size="40" />
+        <p>Aucune recette ne correspond à vos filtres.</p>
+      </div>
+    </section>
 
     <!-- Sentinel + loader pour l'infinite scroll -->
     <div ref="sentinel" class="catalog__sentinel" aria-hidden="true" />
@@ -217,11 +252,42 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
 }
 
+/* Sections */
+.catalog__section {
+  margin-bottom: 48px;
+}
+
+.catalog__section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--kubo-border);
+}
+
+.catalog__section-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--kubo-text);
+}
+
+.catalog__week-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--kubo-green);
+  background: var(--kubo-green-light);
+  padding: 3px 10px;
+  border-radius: var(--radius-xs);
+}
+
 .catalog__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 24px;
-  padding-bottom: 48px;
 }
 
 .catalog__empty {

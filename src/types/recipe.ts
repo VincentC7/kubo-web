@@ -83,3 +83,20 @@ export interface ApiListResponse {
     pages: number
   }
 }
+
+export interface CatalogueDto {
+  semaine: string
+  recettes: RecetteListItemDto[] | Record<string, RecetteListItemDto>
+  meta: {
+    total: number
+    page: number
+    limit: number
+    pages: number
+    catalogue_size: number
+  }
+}
+
+export interface CatalogueResponse extends PaginatedResponse<RecipeListItem> {
+  week: string
+  selectionSize: number
+}

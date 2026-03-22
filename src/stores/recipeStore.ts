@@ -10,6 +10,10 @@ export const useRecipeStore = defineStore('recipe', () => {
   const loading = ref(true)
   const loadingDetailId = ref<string | null>(null)
 
+  // Sélection hebdomadaire
+  const weeklySelectionSize = ref(0)
+  const currentWeek = ref('')
+
   // Cache détail : id → recette enrichie (évite les double-appels)
   const detailCache = new Map<string, RecipeListItem>()
 
@@ -40,8 +44,18 @@ export const useRecipeStore = defineStore('recipe', () => {
     }))
   })
 
+  // Les N premières recettes = sélection scorée de la semaine
+  const weeklySelection = computed<RecipeWithPrice[]>(() =>
+    recipesWithPrice.value.slice(0, weeklySelectionSize.value),
+  )
+
+  // Le reste du catalogue (après la sélection)
+  const catalogueRest = computed<RecipeWithPrice[]>(() =>
+    recipesWithPrice.value.slice(weeklySelectionSize.value),
+  )
+
   const filteredRecipes = computed<RecipeWithPrice[]>(() => {
-    return recipesWithPrice.value.filter((r) => {
+    return catalogueRest.value.filter((r) => {
       const mCat = filters.category === 'Tout' || r.cat === filters.category
       const mTime = filters.maxTime === 0 || r.time <= filters.maxTime
       const mTags =
@@ -85,10 +99,12 @@ export const useRecipeStore = defineStore('recipe', () => {
   async function init(): Promise<void> {
     loading.value = true
     try {
-      const page = await recipeService.getRecipes(1, catalogLimit.value)
-      recipes.value = page.items
-      catalogPages.value = page.pages
+      const result = await recipeService.getCatalogue(1, catalogLimit.value)
+      recipes.value = result.items
+      catalogPages.value = result.pages
       catalogPage.value = 1
+      weeklySelectionSize.value = result.selectionSize
+      currentWeek.value = result.week
     } finally {
       loading.value = false
     }
@@ -99,9 +115,13 @@ export const useRecipeStore = defineStore('recipe', () => {
     catalogLoading.value = true
     try {
       const nextPage = catalogPage.value + 1
-      const page = await recipeService.getRecipes(nextPage, catalogLimit.value)
-      recipes.value = [...recipes.value, ...page.items]
-      catalogPages.value = page.pages
+      const result = await recipeService.getCatalogue(
+        nextPage,
+        catalogLimit.value,
+        currentWeek.value || undefined,
+      )
+      recipes.value = [...recipes.value, ...result.items]
+      catalogPages.value = result.pages
       catalogPage.value = nextPage
     } finally {
       catalogLoading.value = false
@@ -135,6 +155,10 @@ export const useRecipeStore = defineStore('recipe', () => {
     filters,
     catalogLoading,
     catalogHasMore,
+    weeklySelectionSize,
+    weeklySelection,
+    catalogueRest,
+    currentWeek,
     recipesWithPrice,
     filteredRecipes,
     allCategories,
