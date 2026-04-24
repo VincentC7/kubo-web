@@ -109,3 +109,15 @@ export interface CatalogueResponse extends PaginatedResponse<RecipeListItem> {
   week: string
   selectionSize: number
 }
+
+export interface SaisonItemDto {
+  nom: string
+  type: 'legume' | 'fruit'
+  mois_saison: number[]
+}
+
+export interface SaisonResponse {
+  mois: number
+  data: SaisonItemDto[]
+  total: number
+}
