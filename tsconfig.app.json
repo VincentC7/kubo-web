@@ -9,5 +9,5 @@
     "noUnusedParameters": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
-  "exclude": ["src/**/__tests__/*", "node_modules", "dist"]
+  "exclude": ["node_modules", "dist"]
 }

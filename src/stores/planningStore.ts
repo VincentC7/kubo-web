@@ -96,7 +96,7 @@ export const usePlanningStore = defineStore('planning', () => {
     if (entries[id]) {
       entries[id].done = !entries[id].done
       if (entries[id].done) {
-        uiStore.notify('Consommé ! Stock mis à jour.')
+        uiStore.notify('Recette marquée comme cuisinée !')
       }
     }
   }

@@ -5,6 +5,7 @@
  * Le bloc user en bas ouvre le profil si connecté, le login sinon.
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
+import { emailToHue } from '@/utils/avatar'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { useUiStore } from '@/stores/uiStore'
@@ -70,14 +71,6 @@ const userLabel = computed(() => {
   }
   return user.value?.email?.split('@')[0] ?? 'Visiteur'
 })
-
-function emailToHue(email: string): number {
-  let hash = 0
-  for (let i = 0; i < email.length; i++) {
-    hash = (hash * 31 + email.charCodeAt(i)) >>> 0
-  }
-  return hash % 360
-}
 
 const avatarStyle = computed(() => {
   if (!isAuthenticated.value || !user.value?.email) return {}

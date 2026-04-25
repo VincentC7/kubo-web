@@ -4,6 +4,8 @@ import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/authStore'
 import { useUserStore } from '@/stores/userStore'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
+import { emailToHue } from '@/utils/avatar'
+import { usePasswordRules } from '@/composables/usePasswordRules'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
@@ -33,14 +35,6 @@ const initials = computed(() => {
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('')
 })
-
-function emailToHue(email: string): number {
-  let hash = 0
-  for (let i = 0; i < email.length; i++) {
-    hash = (hash * 31 + email.charCodeAt(i)) >>> 0
-  }
-  return hash % 360
-}
 
 const avatarStyle = computed(() => {
   const email = user.value?.email
@@ -116,12 +110,7 @@ const pwdFieldErrors = ref<{
   confirmPassword?: string
 }>({})
 
-const passwordRules = computed(() => ({
-  length: newPassword.value.length >= 8,
-  uppercase: /[A-Z]/.test(newPassword.value),
-  digit: /[0-9]/.test(newPassword.value),
-}))
-const isNewPasswordValid = computed(() => Object.values(passwordRules.value).every(Boolean))
+const { passwordRules, isPasswordValid: isNewPasswordValid } = usePasswordRules(newPassword)
 
 async function savePassword(): Promise<void> {
   pwdFieldErrors.value = {}

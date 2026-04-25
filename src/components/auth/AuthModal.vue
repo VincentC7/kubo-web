@@ -8,6 +8,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
+import { usePasswordRules } from '@/composables/usePasswordRules'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
@@ -42,12 +43,7 @@ const regCooldown = ref(false)
 const regSuccess = ref(false)
 
 // ── Password rules ───────────────────────────────────────────────────────────
-const passwordRules = computed(() => ({
-  length: regPassword.value.length >= 8,
-  uppercase: /[A-Z]/.test(regPassword.value),
-  digit: /[0-9]/.test(regPassword.value),
-}))
-const isPasswordValid = computed(() => Object.values(passwordRules.value).every(Boolean))
+const { passwordRules, isPasswordValid } = usePasswordRules(regPassword)
 
 // ── Close ────────────────────────────────────────────────────────────────────
 function close(): void {
