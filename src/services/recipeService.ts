@@ -85,9 +85,18 @@ export const recipeService = {
     return mapDetail(data)
   },
 
-  async getCatalogue(page = 1, limit = 20, week?: string): Promise<CatalogueResponse> {
+  async getCatalogue(
+    page = 1,
+    limit = 20,
+    week?: string,
+    filters?: { search?: string; tags?: string[]; maxTime?: number; category?: string },
+  ): Promise<CatalogueResponse> {
     const params: Record<string, string | number> = { page, limit }
     if (week) params.week = week
+    if (filters?.search) params.q = filters.search
+    if (filters?.tags?.length) params.tag = filters.tags[0]
+    if (filters?.maxTime) params.temps_max = filters.maxTime
+    if (filters?.category && filters.category !== 'Tout') params.type = filters.category
     const { data } = await httpClient.get<CatalogueDto>('/catalogue', { params })
     const items = toArray<RecetteListItemDto>(data.recettes).map(mapListItem)
     return {

@@ -29,7 +29,7 @@ export const userService = {
     const role = mapRole(payload.roles ?? [])
     const email = payload.username ?? payload.email ?? ''
 
-    return { id: 0, email, role }
+    return { id: '', email, role }
   },
 
   async updateProfile(

@@ -82,22 +82,46 @@ export const useRecipeStore = defineStore('recipe', () => {
   const allTags = computed(() => [...new Set(recipes.value.flatMap((r) => r.tags))])
 
   // ---- Filter actions ----
+  async function applyFilters(): Promise<void> {
+    recipes.value = []
+    catalogPage.value = 1
+    loading.value = true
+    try {
+      const result = await recipeService.getCatalogue(1, catalogLimit.value, undefined, {
+        search: filters.search || undefined,
+        tags: filters.activeTags.length ? filters.activeTags : undefined,
+        maxTime: filters.maxTime || undefined,
+        category: filters.category !== 'Tout' ? filters.category : undefined,
+      })
+      recipes.value = result.items
+      catalogPages.value = result.pages
+      weeklySelectionSize.value = result.selectionSize
+      currentWeek.value = result.week
+    } finally {
+      loading.value = false
+    }
+  }
+
   function setFilterCategory(cat: string): void {
     filters.category = cat
+    applyFilters()
   }
 
   function setFilterMaxTime(time: number): void {
     filters.maxTime = time
+    applyFilters()
   }
 
   function toggleFilterTag(tag: string): void {
     const idx = filters.activeTags.indexOf(tag)
     if (idx > -1) filters.activeTags.splice(idx, 1)
     else filters.activeTags.push(tag)
+    applyFilters()
   }
 
   function setSearch(value: string): void {
     filters.search = value
+    applyFilters()
   }
 
   function resetFilters(): void {
@@ -105,6 +129,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     filters.maxTime = 0
     filters.activeTags.length = 0
     filters.search = ''
+    applyFilters()
   }
 
   // ---- Load actions ----
@@ -113,7 +138,12 @@ export const useRecipeStore = defineStore('recipe', () => {
     if (loading.value || recipes.value.length > 0) return
     loading.value = true
     try {
-      const result = await recipeService.getCatalogue(1, catalogLimit.value)
+      const result = await recipeService.getCatalogue(1, catalogLimit.value, undefined, {
+        search: filters.search || undefined,
+        tags: filters.activeTags.length ? filters.activeTags : undefined,
+        maxTime: filters.maxTime || undefined,
+        category: filters.category !== 'Tout' ? filters.category : undefined,
+      })
       recipes.value = result.items
       catalogPages.value = result.pages
       catalogPage.value = 1
@@ -133,6 +163,12 @@ export const useRecipeStore = defineStore('recipe', () => {
         nextPage,
         catalogLimit.value,
         currentWeek.value || undefined,
+        {
+          search: filters.search || undefined,
+          tags: filters.activeTags.length ? filters.activeTags : undefined,
+          maxTime: filters.maxTime || undefined,
+          category: filters.category !== 'Tout' ? filters.category : undefined,
+        },
       )
       recipes.value = [...recipes.value, ...result.items]
       catalogPages.value = result.pages
