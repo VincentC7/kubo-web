@@ -1,6 +1,8 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
+const DARK_MODE_KEY = 'kubo_dark_mode'
+
 export type ViewName =
   | 'dashboard'
   | 'catalog'
@@ -16,7 +18,10 @@ export const useUiStore = defineStore('ui', () => {
   // ---- State ----
   const currentView = ref<ViewName>('dashboard')
   const sidebarCollapsed = ref(false)
-  const darkMode = ref(false)
+  // Initialise depuis localStorage
+  const darkMode = ref(localStorage.getItem(DARK_MODE_KEY) === 'true')
+  // Applique immédiatement la classe dark au démarrage
+  if (darkMode.value) document.documentElement.classList.add('dark')
   const toastMessage = ref('')
   const toastVisible = ref(false)
   const showInventory = ref(true)
@@ -35,6 +40,7 @@ export const useUiStore = defineStore('ui', () => {
   function setDarkMode(value: boolean): void {
     darkMode.value = value
     document.documentElement.classList.toggle('dark', value)
+    localStorage.setItem(DARK_MODE_KEY, String(value))
   }
 
   function toggleDarkMode(): void {
@@ -50,6 +56,14 @@ export const useUiStore = defineStore('ui', () => {
     }, 3000)
   }
 
+  function setShowInventory(value: boolean): void {
+    showInventory.value = value
+  }
+
+  function setShowGroceries(value: boolean): void {
+    showGroceries.value = value
+  }
+
   return {
     currentView,
     sidebarCollapsed,
@@ -63,5 +77,7 @@ export const useUiStore = defineStore('ui', () => {
     setDarkMode,
     toggleDarkMode,
     notify,
+    setShowInventory,
+    setShowGroceries,
   }
 })

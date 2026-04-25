@@ -109,6 +109,8 @@ export const useRecipeStore = defineStore('recipe', () => {
 
   // ---- Load actions ----
   async function init(): Promise<void> {
+    // Guard : évite un double chargement si appelé depuis App.vue ET authStore.login()
+    if (loading.value || recipes.value.length > 0) return
     loading.value = true
     try {
       const result = await recipeService.getCatalogue(1, catalogLimit.value)

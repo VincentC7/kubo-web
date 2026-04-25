@@ -29,8 +29,8 @@ watch(showGroceries, (v) => {
 })
 
 function save(): void {
-  uiStore.showInventory = localShowInventory.value
-  uiStore.showGroceries = localShowGroceries.value
+  uiStore.setShowInventory(localShowInventory.value)
+  uiStore.setShowGroceries(localShowGroceries.value)
   notify('Paramètres sauvegardés')
 }
 </script>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getSeasonStatus } from '@/composables/useSeason'
+import { getSeasonStatus } from '@/utils/season'
 
 describe('getSeasonStatus', () => {
   // ── Cas sans données ─────────────────────────────────────────────────────────

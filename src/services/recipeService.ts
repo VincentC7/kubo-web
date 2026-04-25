@@ -1,5 +1,5 @@
 import httpClient from './httpClient'
-import { getSeasonStatus } from '@/composables/useSeason'
+import { getSeasonStatus } from '@/utils/season'
 import type {
   RecipeListItem,
   RecipeWithPrice,

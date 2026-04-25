@@ -22,5 +22,9 @@ export const useSeasonStore = defineStore('season', () => {
     }
   }
 
-  return { fruits, legumes, loading, currentMonth, init }
+  function setMonth(mois: number): void {
+    currentMonth.value = mois
+  }
+
+  return { fruits, legumes, loading, currentMonth, init, setMonth }
 })

@@ -7,7 +7,9 @@ import KuboIcon from '@/components/ui/KuboIcon.vue'
 import KuboTag from '@/components/ui/KuboTag.vue'
 import KuboButton from '@/components/ui/KuboButton.vue'
 import MacroBar from '@/components/recipes/MacroBar.vue'
-import type { RecipeWithPrice, SeasonStatus } from '@/types/recipe'
+import RecipeIngredientList from '@/components/recipes/RecipeIngredientList.vue'
+import RecipeStepList from '@/components/recipes/RecipeStepList.vue'
+import type { RecipeWithPrice } from '@/types/recipe'
 
 const props = withDefaults(
   defineProps<{
@@ -25,13 +27,6 @@ const macroTotal = computed(() => {
 })
 
 const hasDetail = computed(() => !props.loading && (props.recipe?.ingredients?.length ?? 0) > 0)
-
-const seasonTooltip: Record<SeasonStatus, string> = {
-  in: 'De saison ce mois-ci',
-  ending: 'De saison ce mois-ci, mais plus le mois prochain',
-  starting: 'Pas encore en saison, mais le sera le mois prochain',
-  out: 'Hors saison',
-}
 
 const imgError = ref(false)
 watch(
@@ -141,65 +136,13 @@ watch(
             </div>
 
             <!-- Ingrédients -->
-            <section class="rdm__section">
-              <h3 class="rdm__section-title">
-                <KuboIcon name="list-checks" :size="16" class="rdm__section-icon" />
-                Ingrédients
-              </h3>
-              <div v-if="!hasDetail" class="rdm__ingredients">
-                <div v-for="n in 6" :key="n" class="rdm__skeleton rdm__skeleton--ingredient" />
-              </div>
-              <div v-else class="rdm__ingredients">
-                <div v-for="ing in recipe.ingredients" :key="ing.name" class="rdm__ingredient">
-                  <div class="rdm__ing-icon">
-                    <KuboIcon name="package" :size="14" />
-                  </div>
-                  <span class="rdm__ing-name">{{ ing.name }}</span>
-                  <span
-                    v-if="ing.seasonStatus"
-                    :class="['rdm__season-icon', `rdm__season-icon--${ing.seasonStatus}`]"
-                    :data-tooltip="seasonTooltip[ing.seasonStatus]"
-                  >
-                    <KuboIcon name="leaf" :size="12" />
-                  </span>
-                  <span v-if="ing.qty" class="rdm__ing-qty">{{ ing.qty }}</span>
-                </div>
-              </div>
-            </section>
+            <RecipeIngredientList
+              :ingredients="recipe.ingredients ?? []"
+              :loading="loading || !hasDetail"
+            />
 
             <!-- Étapes -->
-            <section class="rdm__section">
-              <h3 class="rdm__section-title">
-                <KuboIcon name="chef-hat" :size="16" class="rdm__section-icon" />
-                Préparation
-              </h3>
-              <div v-if="!hasDetail" class="rdm__steps">
-                <div v-for="n in 2" :key="n" class="rdm__step-block">
-                  <div class="rdm__skeleton rdm__skeleton--step-header" />
-                  <div class="rdm__step-instructions">
-                    <div class="rdm__skeleton rdm__skeleton--step-text" />
-                    <div class="rdm__skeleton rdm__skeleton--step-text" />
-                  </div>
-                </div>
-              </div>
-              <div v-else class="rdm__steps">
-                <div v-for="step in recipe.steps" :key="step.numero" class="rdm__step-block">
-                  <div class="rdm__step-header">
-                    <div class="rdm__step-num">{{ step.numero }}</div>
-                    <span class="rdm__step-label">Étape {{ step.numero }}</span>
-                  </div>
-                  <ul class="rdm__step-instructions">
-                    <li
-                      v-for="(instruction, i) in step.instructions"
-                      :key="i"
-                      class="rdm__step-instruction"
-                    >
-                      {{ instruction }}
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </section>
+            <RecipeStepList :steps="recipe.steps ?? []" :loading="loading || !hasDetail" />
 
             <!-- Spacer pour que le CTA sticky ne cache pas le dernier élément -->
             <div class="rdm__scroll-pad" />
@@ -447,216 +390,11 @@ watch(
   gap: 12px;
 }
 
-/* ── Sections ── */
+/* ── Sections (référencées dans les sous-composants, conservées pour héritage) ── */
 .rdm__section {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.rdm__section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--kubo-text);
-}
-
-.rdm__section-icon {
-  color: var(--kubo-green);
-}
-
-/* ── Ingrédients ── */
-.rdm__ingredients {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-@media (max-width: 420px) {
-  .rdm__ingredients {
-    grid-template-columns: 1fr;
-  }
-}
-
-.rdm__ingredient {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--kubo-surface-mute);
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  transition: border-color var(--transition-base);
-}
-.rdm__ingredient:hover {
-  border-color: var(--kubo-border-mid);
-}
-
-.rdm__ing-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-xs);
-  background: var(--kubo-green-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--kubo-green);
-  flex-shrink: 0;
-}
-
-.rdm__ing-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--kubo-text);
-  flex: 1;
-}
-
-.rdm__ing-qty {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--kubo-green);
-  background: var(--kubo-green-light);
-  padding: 2px 7px;
-  border-radius: var(--radius-xs);
-  white-space: nowrap;
-}
-
-/* ── Pictogramme saisonnalité ── */
-.rdm__season-icon {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  cursor: default;
-}
-
-/* Couleurs par statut */
-.rdm__season-icon--in {
-  color: #065f46;
-  background: #d1fae5;
-}
-.rdm__season-icon--ending {
-  color: #92400e;
-  background: #fef3c7;
-}
-.rdm__season-icon--starting {
-  color: #1e40af;
-  background: #dbeafe;
-}
-.rdm__season-icon--out {
-  color: #991b1b;
-  background: #fee2e2;
-}
-
-/* Tooltip CSS */
-.rdm__season-icon::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  background: var(--kubo-text);
-  color: var(--kubo-surface);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  z-index: 10;
-}
-/* Petite flèche */
-.rdm__season-icon::before {
-  content: '';
-  position: absolute;
-  bottom: calc(100% + 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-top-color: var(--kubo-text);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  z-index: 10;
-}
-.rdm__season-icon:hover::after,
-.rdm__season-icon:hover::before {
-  opacity: 1;
-}
-
-/* ── Étapes ── */
-.rdm__steps {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.rdm__step-block {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.rdm__step-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.rdm__step-num {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--kubo-green);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 3px 8px var(--kubo-green-shadow);
-}
-
-.rdm__step-label {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--kubo-text);
-}
-
-.rdm__step-instructions {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 0 38px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rdm__step-instruction {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--kubo-text-muted);
-  line-height: 1.65;
-  padding-left: 14px;
-  position: relative;
-}
-.rdm__step-instruction::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 9px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--kubo-border-mid);
 }
 
 /* ── CTA sticky ── */

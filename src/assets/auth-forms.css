@@ -1,0 +1,211 @@
+/* ── Styles partagés des formulaires d'authentification ── */
+
+/* Form */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.auth-field__label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--kubo-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.auth-field__wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.auth-field__icon {
+  position: absolute;
+  left: 13px;
+  color: var(--kubo-text-faint);
+  pointer-events: none;
+}
+.auth-field__input {
+  width: 100%;
+  padding: 11px 13px 11px 38px;
+  background: var(--kubo-surface-mute);
+  border: 1px solid var(--kubo-border);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-base);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kubo-text);
+  outline: none;
+  transition: border-color var(--transition-base);
+}
+.auth-field__input--padded-right {
+  padding-right: 42px;
+}
+.auth-field__input--error {
+  border-color: var(--kubo-danger, #ef4444);
+}
+.auth-field__input:focus {
+  border-color: var(--kubo-green);
+}
+.auth-field__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-field__eye {
+  position: absolute;
+  right: 11px;
+  background: none;
+  border: none;
+  color: var(--kubo-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+.auth-field__error-msg {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--kubo-danger, #ef4444);
+}
+
+/* Password rules */
+.auth-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+.auth-rule {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--kubo-text-faint);
+  background: var(--kubo-surface-mute);
+  border: 1px solid var(--kubo-border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  transition: all var(--transition-base);
+}
+.auth-rule--ok {
+  color: var(--kubo-green);
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Error */
+.auth-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kubo-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 10px 13px;
+}
+
+/* Success */
+.auth-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-lg);
+  color: var(--kubo-green);
+  margin-bottom: 16px;
+}
+.auth-success__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--kubo-green);
+}
+.auth-success__sub {
+  font-size: 12px;
+  color: var(--kubo-text-muted);
+  margin-top: 2px;
+}
+
+/* Submit */
+.auth-submit {
+  margin-top: 6px;
+  padding: 13px;
+  background: var(--kubo-green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-base);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    opacity var(--transition-base),
+    box-shadow var(--transition-base);
+  box-shadow: 0 4px 16px var(--kubo-green-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+}
+.auth-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.auth-submit:not(:disabled):hover {
+  opacity: 0.9;
+}
+.auth-submit__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Footer switch */
+.auth-modal__title {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--kubo-text);
+  margin-bottom: 4px;
+}
+.auth-modal__subtitle {
+  font-size: 13px;
+  color: var(--kubo-text-muted);
+  margin-bottom: 28px;
+}
+.auth-modal__footer {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--kubo-text-muted);
+}
+.auth-modal__switch {
+  background: none;
+  border: none;
+  color: var(--kubo-green);
+  font-weight: 800;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  text-decoration: underline;
+}

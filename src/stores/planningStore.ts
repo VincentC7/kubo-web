@@ -50,7 +50,7 @@ export const usePlanningStore = defineStore('planning', () => {
   )
 
   const nutritionTotals = computed(() => {
-    if (!selectedRecipes.value.length) return { prot: 30, fat: 30, carb: 40 }
+    if (!selectedRecipes.value.length) return null
     return selectedRecipes.value.reduce(
       (acc, r) => ({ prot: acc.prot + r.prot, fat: acc.fat + r.fat, carb: acc.carb + r.carb }),
       { prot: 0, fat: 0, carb: 0 },

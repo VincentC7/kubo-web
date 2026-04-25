@@ -164,10 +164,9 @@ describe('planningStore', () => {
   // ── nutritionTotals ──────────────────────────────────────────────────────────
 
   describe('nutritionTotals', () => {
-    it('retourne des valeurs par défaut si aucune recette sélectionnée', () => {
+    it('retourne null si aucune recette sélectionnée', () => {
       const store = usePlanningStore()
-      // Comportement actuel documenté (valeurs fictives)
-      expect(store.nutritionTotals).toEqual({ prot: 30, fat: 30, carb: 40 })
+      expect(store.nutritionTotals).toBeNull()
     })
 
     it('calcule correctement la somme des macros des recettes sélectionnées', () => {
