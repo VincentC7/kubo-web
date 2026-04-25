@@ -1,18 +1,19 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { userService } from '@/services/userService'
 import { settingsService } from '@/services/settingsService'
+import { userService } from '@/services/userService'
 import { useUiStore } from './uiStore'
-import type { User, Settings } from '@/types/user'
+import { useAuthStore } from './authStore'
+import type { User, Settings, UpdateProfilePayload, ChangePasswordPayload } from '@/types/user'
 
 export const useUserStore = defineStore('user', () => {
-  // ---- State ----
+  // ── State ──────────────────────────────────────────────────────────────────
   const user = ref<User | null>(null)
   const portions = ref(2)
   const mealsGoal = ref(5)
   const viewMode = ref<Settings['viewMode']>('week')
 
-  // ---- Actions ----
+  // ── Actions ────────────────────────────────────────────────────────────────
   function updatePortions(delta: number): void {
     portions.value = Math.max(1, portions.value + delta)
   }
@@ -26,18 +27,50 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function init(): Promise<void> {
-    const [userData, settings] = await Promise.all([
-      userService.getUser(),
-      settingsService.getSettings(),
-    ])
-    user.value = userData
-    portions.value = settings.portions
-    mealsGoal.value = settings.mealsGoal
-    viewMode.value = settings.viewMode
+    const authStore = useAuthStore()
 
-    const uiStore = useUiStore()
-    if (settings.darkMode) uiStore.setDarkMode(true)
-    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) uiStore.setDarkMode(true)
+    if (authStore.isAuthenticated) {
+      const base = userService.getUserFromToken()
+      if (base) {
+        // firstName/lastName absents du JWT : on les initialise vides,
+        // ils seront renseignés dès le premier PATCH ou si l'API les expose.
+        user.value = {
+          ...base,
+          firstName: user.value?.firstName ?? '',
+          lastName: user.value?.lastName ?? '',
+        }
+      }
+
+      const settings = await settingsService.getSettings()
+      portions.value = settings.portions
+      mealsGoal.value = settings.mealsGoal
+      viewMode.value = settings.viewMode
+
+      const uiStore = useUiStore()
+      if (settings.darkMode) uiStore.setDarkMode(true)
+      else if (window.matchMedia('(prefers-color-scheme: dark)').matches) uiStore.setDarkMode(true)
+    } else {
+      user.value = null
+      const uiStore = useUiStore()
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) uiStore.setDarkMode(true)
+    }
+  }
+
+  /** Appelée après un PATCH /user réussi — met à jour firstName/lastName localement */
+  function setProfile(data: Pick<User, 'firstName' | 'lastName' | 'email'>): void {
+    if (!user.value) return
+    user.value = { ...user.value, ...data }
+  }
+
+  /** Wrapper updateProfile — appelle l'API puis met à jour le store */
+  async function updateProfile(payload: UpdateProfilePayload): Promise<void> {
+    const updated = await userService.updateProfile(payload)
+    setProfile(updated)
+  }
+
+  /** Wrapper changePassword — délègue à userService */
+  async function changePassword(payload: ChangePasswordPayload): Promise<void> {
+    await userService.changePassword(payload)
   }
 
   return {
@@ -49,5 +82,7 @@ export const useUserStore = defineStore('user', () => {
     updateMealsGoal,
     switchViewMode,
     init,
+    updateProfile,
+    changePassword,
   }
 })

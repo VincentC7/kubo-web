@@ -24,7 +24,16 @@ const progressLabel = 'Courses cochées'
 </script>
 
 <template>
-  <header v-if="currentView !== 'settings'" class="app-header" data-testid="app-header">
+  <header
+    v-if="
+      currentView !== 'settings' &&
+      currentView !== 'login' &&
+      currentView !== 'register' &&
+      currentView !== 'profile'
+    "
+    class="app-header"
+    data-testid="app-header"
+  >
     <!-- Period selector -->
     <div class="app-header__week" data-testid="week-selector">
       <button

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppBottomNav from '@/components/layout/AppBottomNav.vue'
@@ -10,26 +10,56 @@ import PlanningView from '@/views/PlanningView.vue'
 import GroceriesView from '@/views/GroceriesView.vue'
 import InventoryView from '@/views/InventoryView.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import ProfileView from '@/views/ProfileView.vue'
+import AuthModal from '@/components/auth/AuthModal.vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
 import { useUserStore } from '@/stores/userStore'
 import { useRecipeStore } from '@/stores/recipeStore'
 import { usePlanningStore } from '@/stores/planningStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
+import { useAuthStore } from '@/stores/authStore'
 
 const uiStore = useUiStore()
 const { currentView } = storeToRefs(uiStore)
 
+const authStore = useAuthStore()
+const { isAuthenticated } = storeToRefs(authStore)
+
 const loading = ref(true)
+
+// La modale auth est ouverte si on est sur login ou register
+const isAuthModal = computed(
+  () => currentView.value === 'login' || currentView.value === 'register',
+)
+
+// La vue affichée derrière la modale (ou principale si pas de modale)
+const shellView = computed(() => {
+  if (isAuthModal.value) return 'catalog'
+  return currentView.value
+})
 
 onMounted(async () => {
   try {
-    await Promise.all([
-      useUserStore().init(),
-      useRecipeStore().init(),
-      usePlanningStore().init(),
-      useInventoryStore().init(),
-    ])
+    await authStore.tryRefresh()
+
+    if (isAuthenticated.value) {
+      uiStore.navTo('dashboard')
+    } else {
+      uiStore.navTo('catalog')
+    }
+
+    await useUserStore().init()
+
+    if (isAuthenticated.value) {
+      await Promise.all([
+        useRecipeStore().init(),
+        usePlanningStore().init(),
+        useInventoryStore().init(),
+      ])
+    } else {
+      await useRecipeStore().init()
+    }
   } finally {
     loading.value = false
   }
@@ -37,50 +67,97 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="app-shell">
-    <!-- Sidebar -->
-    <AppSidebar class="app-shell__sidebar" />
-
-    <!-- Main -->
-    <div class="app-shell__main">
-      <AppHeader />
-
-      <!-- Loading state -->
-      <div v-if="loading" class="app-shell__loader">
-        <div class="app-shell__spinner" />
-        <p>Chargement…</p>
+  <div class="app-root">
+    <!-- Loading global -->
+    <div v-if="loading" class="app-loader">
+      <div class="app-loader__logo">
+        <span class="app-loader__k">K</span>
       </div>
-
-      <!-- Views -->
-      <main v-else class="app-shell__content custom-scrollbar">
-        <Transition name="view" mode="out-in">
-          <DashboardView v-if="currentView === 'dashboard'" key="dashboard" />
-          <CatalogView v-else-if="currentView === 'catalog'" key="catalog" />
-          <PlanningView v-else-if="currentView === 'planning'" key="planning" />
-          <GroceriesView v-else-if="currentView === 'groceries'" key="groceries" />
-          <InventoryView v-else-if="currentView === 'inventory'" key="inventory" />
-          <SettingsView v-else-if="currentView === 'settings'" key="settings" />
-        </Transition>
-      </main>
+      <div class="app-loader__spinner" />
     </div>
 
-    <ToastNotification />
+    <!-- App shell (toujours monté après le loading) -->
+    <div v-else class="app-shell">
+      <AppSidebar class="app-shell__sidebar" />
 
-    <!-- Bottom nav mobile (< 768px) -->
-    <AppBottomNav class="app-shell__bottom-nav" />
+      <div class="app-shell__main">
+        <AppHeader />
+
+        <main class="app-shell__content custom-scrollbar">
+          <Transition name="view" mode="out-in">
+            <DashboardView v-if="shellView === 'dashboard'" key="dashboard" />
+            <CatalogView v-else-if="shellView === 'catalog'" key="catalog" />
+            <PlanningView v-else-if="shellView === 'planning'" key="planning" />
+            <GroceriesView v-else-if="shellView === 'groceries'" key="groceries" />
+            <InventoryView v-else-if="shellView === 'inventory'" key="inventory" />
+            <SettingsView v-else-if="shellView === 'settings'" key="settings" />
+            <ProfileView v-else-if="shellView === 'profile'" key="profile" />
+          </Transition>
+        </main>
+      </div>
+
+      <ToastNotification />
+      <AppBottomNav class="app-shell__bottom-nav" />
+
+      <!-- Modale auth (login / register) par-dessus le shell -->
+      <Transition name="modal">
+        <AuthModal v-if="isAuthModal" />
+      </Transition>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.app-root {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Loader */
+.app-loader {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: var(--kubo-bg);
+}
+.app-loader__logo {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--kubo-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px var(--kubo-green-shadow);
+}
+.app-loader__k {
+  color: #fff;
+  font-weight: 900;
+  font-size: 28px;
+  line-height: 1;
+}
+.app-loader__spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--kubo-border);
+  border-top-color: var(--kubo-green);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Shell */
 .app-shell {
   display: flex;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
   background: var(--kubo-bg);
+  position: relative;
 }
 
-/* Sidebar masquée sur mobile */
 .app-shell__sidebar {
   display: none;
 }
@@ -103,32 +180,10 @@ onMounted(async () => {
   overflow-y: auto;
 }
 
-/* Sur mobile, laisser de la place pour la bottom nav */
 @media (max-width: 767px) {
   .app-shell__content {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
-}
-
-/* Loader */
-.app-shell__loader {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  color: var(--kubo-text-muted);
-  font-size: 14px;
-  font-weight: 700;
-}
-.app-shell__spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid var(--kubo-border);
-  border-top-color: var(--kubo-green);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
 }
 
 /* View transitions */
@@ -145,5 +200,23 @@ onMounted(async () => {
 .view-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+/* Modal transition */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-enter-active .auth-modal__card,
+.modal-leave-active .auth-modal__card {
+  transition:
+    transform 0.25s ease,
+    opacity 0.2s ease;
+}
+.modal-enter-from {
+  opacity: 0;
+}
+.modal-leave-to {
+  opacity: 0;
 }
 </style>

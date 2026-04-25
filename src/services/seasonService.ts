@@ -180,7 +180,7 @@ export interface SeasonData {
 
 export async function getSeasonIngredients(mois?: number): Promise<SeasonData> {
   const params = mois !== undefined ? { mois } : {}
-  const { data } = await httpClient.get<SaisonResponse>('/api/ingredients/saison', { params })
+  const { data } = await httpClient.get<SaisonResponse>('/ingredients/saison', { params })
 
   const items: SaisonItemDto[] = Array.isArray(data.data) ? data.data : []
 

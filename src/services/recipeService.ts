@@ -70,7 +70,7 @@ function mapDetail(r: RecetteDetailDto): RecipeListItem {
 
 export const recipeService = {
   async getRecipes(page = 1, limit = 20): Promise<PaginatedResponse<RecipeListItem>> {
-    const { data } = await httpClient.get<ApiListResponse>('/api/recettes', {
+    const { data } = await httpClient.get<ApiListResponse>('/recettes', {
       params: { page, limit },
     })
     return {
@@ -81,14 +81,14 @@ export const recipeService = {
   },
 
   async getRecipeById(id: string): Promise<RecipeListItem> {
-    const { data } = await httpClient.get<RecetteDetailDto>(`/api/recettes/${id}`)
+    const { data } = await httpClient.get<RecetteDetailDto>(`/recettes/${id}`)
     return mapDetail(data)
   },
 
   async getCatalogue(page = 1, limit = 20, week?: string): Promise<CatalogueResponse> {
     const params: Record<string, string | number> = { page, limit }
     if (week) params.week = week
-    const { data } = await httpClient.get<CatalogueDto>('/api/catalogue', { params })
+    const { data } = await httpClient.get<CatalogueDto>('/catalogue', { params })
     const items = toArray<RecetteListItemDto>(data.recettes).map(mapListItem)
     return {
       items,

@@ -1,38 +1,99 @@
 <script setup lang="ts">
 /**
- * AppSidebar — Organisme navigation principale
+ * AppSidebar — Navigation principale
+ * Chaque lien est filtré par useFeatureAccess().
+ * Le bloc user en bas ouvre le profil si connecté, le login sinon.
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import { useUiStore } from '@/stores/uiStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useUserStore } from '@/stores/userStore'
+import { useFeatureAccess } from '@/composables/useFeatureAccess'
 import type { ViewName } from '@/stores/uiStore'
+import type { Feature } from '@/services/featureAccessService'
 
 const uiStore = useUiStore()
 const { currentView, sidebarCollapsed, showInventory, showGroceries } = storeToRefs(uiStore)
 const { navTo, toggleSidebar } = uiStore
 
+const authStore = useAuthStore()
+const { isAuthenticated } = storeToRefs(authStore)
 const userStore = useUserStore()
 const { user } = storeToRefs(userStore)
+const { can } = useFeatureAccess()
 
 interface NavItem {
   id: ViewName
   label: string
   icon: string
+  feature: Feature
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: 'layout-dashboard' },
-  { id: 'catalog', label: 'Recettes', icon: 'utensils' },
-  { id: 'planning', label: 'Menu Hebdo', icon: 'calendar' },
-  { id: 'groceries', label: 'Courses', icon: 'shopping-cart' },
-  { id: 'inventory', label: 'Inventaire', icon: 'box' },
+  {
+    id: 'dashboard',
+    label: 'Tableau de bord',
+    icon: 'layout-dashboard',
+    feature: 'nav:link:dashboard',
+  },
+  { id: 'catalog', label: 'Recettes', icon: 'utensils', feature: 'nav:link:catalog' },
+  { id: 'planning', label: 'Menu Hebdo', icon: 'calendar', feature: 'nav:link:planning' },
+  { id: 'groceries', label: 'Courses', icon: 'shopping-cart', feature: 'nav:link:groceries' },
+  { id: 'inventory', label: 'Inventaire', icon: 'box', feature: 'nav:link:inventory' },
 ]
 
 function isNavVisible(item: NavItem): boolean {
+  if (!can.value(item.feature)) return false
   if (item.id === 'inventory') return showInventory.value
   if (item.id === 'groceries') return showGroceries.value
   return true
+}
+
+// User section
+const userInitials = computed(() => {
+  if (user.value?.firstName && user.value?.lastName) {
+    return (user.value.firstName[0] + user.value.lastName[0]).toUpperCase()
+  }
+  if (!user.value?.email) return '?'
+  const parts = user.value.email.split('@')[0].split(/[._-]/)
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('')
+})
+
+const userLabel = computed(() => {
+  if (user.value?.firstName || user.value?.lastName) {
+    return [user.value?.firstName, user.value?.lastName].filter(Boolean).join(' ')
+  }
+  return user.value?.email?.split('@')[0] ?? 'Visiteur'
+})
+
+function emailToHue(email: string): number {
+  let hash = 0
+  for (let i = 0; i < email.length; i++) {
+    hash = (hash * 31 + email.charCodeAt(i)) >>> 0
+  }
+  return hash % 360
+}
+
+const avatarStyle = computed(() => {
+  if (!isAuthenticated.value || !user.value?.email) return {}
+  const hue = emailToHue(user.value.email)
+  return {
+    background: `hsl(${hue}, 65%, 88%)`,
+    color: `hsl(${hue}, 55%, 28%)`,
+  }
+})
+
+function handleUserClick(): void {
+  if (isAuthenticated.value) {
+    navTo('profile')
+  } else {
+    navTo('login')
+  }
 }
 </script>
 
@@ -74,6 +135,7 @@ function isNavVisible(item: NavItem): boolean {
       <div class="sidebar__divider" />
 
       <button
+        v-if="can('nav:link:settings')"
         :class="['sidebar__item', { 'sidebar__item--active': currentView === 'settings' }]"
         :title="sidebarCollapsed ? 'Paramètres' : undefined"
         data-testid="nav-settings"
@@ -84,14 +146,38 @@ function isNavVisible(item: NavItem): boolean {
       </button>
     </nav>
 
-    <!-- User -->
-    <div class="sidebar__user">
-      <div class="sidebar__avatar">{{ user?.initials ?? '?' }}</div>
-      <div v-show="!sidebarCollapsed" class="sidebar__user-info">
-        <p class="sidebar__user-name">{{ user?.name }}</p>
-        <p class="sidebar__user-role">{{ user?.role }}</p>
+    <!-- User connecté -->
+    <button
+      v-if="isAuthenticated"
+      class="sidebar__user"
+      :title="sidebarCollapsed ? 'Mon profil' : undefined"
+      @click="handleUserClick"
+    >
+      <div class="sidebar__avatar" :style="avatarStyle">
+        <span>{{ userInitials }}</span>
       </div>
-    </div>
+      <div v-show="!sidebarCollapsed" class="sidebar__user-info">
+        <p class="sidebar__user-name">{{ userLabel }}</p>
+        <p class="sidebar__user-email">{{ user?.email }}</p>
+      </div>
+      <KuboIcon
+        v-show="!sidebarCollapsed"
+        name="chevron-right"
+        :size="14"
+        class="sidebar__user-chevron"
+      />
+    </button>
+
+    <!-- Bouton Se connecter (visiteur) -->
+    <button
+      v-else
+      class="sidebar__login-btn"
+      :title="sidebarCollapsed ? 'Se connecter' : undefined"
+      @click="handleUserClick"
+    >
+      <KuboIcon v-if="sidebarCollapsed" name="log-in" :size="18" />
+      <span v-else>Se connecter</span>
+    </button>
   </aside>
 </template>
 
@@ -210,16 +296,25 @@ function isNavVisible(item: NavItem): boolean {
   margin: 8px 0;
 }
 
-/* User */
+/* User connecté */
 .sidebar__user {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px;
   background: var(--kubo-surface-mute);
+  border: 1px solid var(--kubo-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
   margin-top: auto;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  width: 100%;
+  text-align: left;
+}
+.sidebar__user:hover {
+  border-color: var(--kubo-green);
+  background: rgba(16, 185, 129, 0.06);
 }
 .sidebar--collapsed .sidebar__user {
   justify-content: center;
@@ -228,8 +323,6 @@ function isNavVisible(item: NavItem): boolean {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #d1fae5;
-  color: #065f46;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -239,6 +332,8 @@ function isNavVisible(item: NavItem): boolean {
 }
 .sidebar__user-info {
   overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
 .sidebar__user-name {
   font-size: 12px;
@@ -248,11 +343,46 @@ function isNavVisible(item: NavItem): boolean {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sidebar__user-role {
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.sidebar__user-email {
+  font-size: 10px;
+  font-weight: 600;
   color: var(--kubo-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar__user-chevron {
+  color: var(--kubo-text-faint);
+  flex-shrink: 0;
+}
+
+/* Bouton Se connecter (visiteur) */
+.sidebar__login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 12px 16px;
+  width: 100%;
+  background: var(--kubo-green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-xl);
+  font-family: var(--font-base);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity var(--transition-base);
+  box-shadow: 0 4px 16px var(--kubo-green-shadow);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sidebar__login-btn:hover {
+  opacity: 0.9;
+}
+.sidebar--collapsed .sidebar__login-btn {
+  padding: 12px;
 }
 </style>

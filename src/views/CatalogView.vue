@@ -28,6 +28,7 @@ const {
   catalogLoading,
   catalogHasMore,
   loadingDetailId,
+  hasActiveFilters,
 } = storeToRefs(recipeStore)
 const { setSearch, loadMoreRecipes, fetchDetail } = recipeStore
 
@@ -78,7 +79,12 @@ function handleModalToggle(): void {
   closeDetail()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Si le store est vide, on charge (loading=true au départ = pas encore initialisé)
+  if (recipeStore.recipes.length === 0) {
+    await recipeStore.init()
+  }
+
   observer = new IntersectionObserver(
     (entries) => {
       if (entries[0].isIntersecting && catalogHasMore.value && !catalogLoading.value) {
@@ -135,8 +141,8 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <!-- Section 1 : Sélection de la semaine -->
-    <section v-if="weeklySelection.length" class="catalog__section">
+    <!-- Section 1 : Sélection de la semaine (masquée si filtre actif) -->
+    <section v-if="weeklySelection.length && !hasActiveFilters" class="catalog__section">
       <div class="catalog__section-header">
         <h2 class="catalog__section-title">Sélection de la semaine</h2>
         <span v-if="weekLabel" class="catalog__week-badge">{{ weekLabel }}</span>
@@ -156,7 +162,9 @@ onBeforeUnmount(() => {
     <!-- Section 2 : Toutes les recettes -->
     <section class="catalog__section">
       <div class="catalog__section-header">
-        <h2 class="catalog__section-title">Toutes les recettes</h2>
+        <h2 class="catalog__section-title">
+          {{ hasActiveFilters ? 'Résultats de recherche' : 'Toutes les recettes' }}
+        </h2>
       </div>
 
       <div v-if="filteredRecipes.length" class="catalog__grid" data-testid="recipe-grid">

@@ -7,7 +7,7 @@ import type { RecipeListItem, RecipeWithPrice } from '@/types/recipe'
 export const useRecipeStore = defineStore('recipe', () => {
   // ---- State ----
   const recipes = ref<RecipeListItem[]>([])
-  const loading = ref(true)
+  const loading = ref(false)
   const loadingDetailId = ref<string | null>(null)
 
   // Sélection hebdomadaire
@@ -54,8 +54,20 @@ export const useRecipeStore = defineStore('recipe', () => {
     recipesWithPrice.value.slice(weeklySelectionSize.value),
   )
 
+  // Indique si au moins un filtre est actif
+  const hasActiveFilters = computed(
+    () =>
+      filters.category !== 'Tout' ||
+      filters.maxTime !== 0 ||
+      filters.activeTags.length > 0 ||
+      filters.search !== '',
+  )
+
   const filteredRecipes = computed<RecipeWithPrice[]>(() => {
-    return catalogueRest.value.filter((r) => {
+    // Si aucun filtre : affiche uniquement le reste (hors sélection de la semaine)
+    // Si filtre actif : cherche sur toutes les recettes
+    const source = hasActiveFilters.value ? recipesWithPrice.value : catalogueRest.value
+    return source.filter((r) => {
       const mCat = filters.category === 'Tout' || r.cat === filters.category
       const mTime = filters.maxTime === 0 || r.time <= filters.maxTime
       const mTags =
@@ -155,6 +167,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     filters,
     catalogLoading,
     catalogHasMore,
+    hasActiveFilters,
     weeklySelectionSize,
     weeklySelection,
     catalogueRest,

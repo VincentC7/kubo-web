@@ -1,33 +1,38 @@
 <script setup lang="ts">
 /**
- * AppBottomNav — Navigation mobile fixée en bas de l'écran (< 768px)
- * Miroir de la sidebar : mêmes items, même logique de visibilité.
+ * AppBottomNav — Navigation mobile (< 768px)
+ * Chaque item filtré par useFeatureAccess().
  */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
+import { useFeatureAccess } from '@/composables/useFeatureAccess'
 import type { ViewName } from '@/stores/uiStore'
+import type { Feature } from '@/services/featureAccessService'
 
 const uiStore = useUiStore()
 const { currentView, showInventory, showGroceries } = storeToRefs(uiStore)
 const { navTo } = uiStore
+const { can } = useFeatureAccess()
 
 interface NavItem {
   id: ViewName
   label: string
   icon: string
+  feature: Feature
 }
 
 const ALL_NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Accueil', icon: 'layout-dashboard' },
-  { id: 'catalog', label: 'Recettes', icon: 'utensils' },
-  { id: 'planning', label: 'Menu', icon: 'calendar' },
-  { id: 'groceries', label: 'Courses', icon: 'shopping-cart' },
-  { id: 'inventory', label: 'Inventaire', icon: 'box' },
-  { id: 'settings', label: 'Réglages', icon: 'settings' },
+  { id: 'dashboard', label: 'Accueil', icon: 'layout-dashboard', feature: 'nav:link:dashboard' },
+  { id: 'catalog', label: 'Recettes', icon: 'utensils', feature: 'nav:link:catalog' },
+  { id: 'planning', label: 'Menu', icon: 'calendar', feature: 'nav:link:planning' },
+  { id: 'groceries', label: 'Courses', icon: 'shopping-cart', feature: 'nav:link:groceries' },
+  { id: 'inventory', label: 'Inventaire', icon: 'box', feature: 'nav:link:inventory' },
+  { id: 'settings', label: 'Réglages', icon: 'settings', feature: 'nav:link:settings' },
 ]
 
 function isVisible(item: NavItem): boolean {
+  if (!can.value(item.feature)) return false
   if (item.id === 'inventory') return showInventory.value
   if (item.id === 'groceries') return showGroceries.value
   return true
@@ -62,12 +67,10 @@ function isVisible(item: NavItem): boolean {
   align-items: stretch;
   background: var(--kubo-surface);
   border-top: 1px solid var(--kubo-border);
-  /* Safe area pour iPhone avec encoche */
   padding-bottom: env(safe-area-inset-bottom, 0px);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
 }
 
-/* Visible uniquement en mobile */
 @media (min-width: 768px) {
   .bottom-nav {
     display: none;

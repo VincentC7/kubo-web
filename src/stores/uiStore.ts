@@ -1,7 +1,16 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
-export type ViewName = 'dashboard' | 'catalog' | 'planning' | 'groceries' | 'inventory' | 'settings'
+export type ViewName =
+  | 'dashboard'
+  | 'catalog'
+  | 'planning'
+  | 'groceries'
+  | 'inventory'
+  | 'settings'
+  | 'login'
+  | 'register'
+  | 'profile'
 
 export const useUiStore = defineStore('ui', () => {
   // ---- State ----
