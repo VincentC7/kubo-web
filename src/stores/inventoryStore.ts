@@ -1,79 +1,96 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { inventoryService } from '@/services/inventoryService'
-import { usePlanningStore } from './planningStore'
-import type { Ingredient } from '@/types/recipe'
+import { useUiStore } from './uiStore'
+import type {
+  InventoryItem,
+  CreateInventoryItem,
+  UpdateInventoryItem,
+  InventoryFilters,
+} from '@/types/inventory'
 
 export const useInventoryStore = defineStore('inventory', () => {
   // ---- State ----
-  const inventory = ref<Ingredient[]>([])
+  const items = ref<InventoryItem[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
 
   // ---- Computed ----
-  const groceryProgress = computed(() => {
-    const planningStore = usePlanningStore()
-    const allIngredients = planningStore.selectedRecipes.flatMap((r) => r.ingredients)
-    const total = allIngredients.length
-    const checked = allIngredients.filter((i) =>
-      inventory.value.some((inv) => inv.name === i.name),
-    ).length
-    return { checked, total }
-  })
+  const expiringSoon = computed(() => items.value.filter((i) => i.status === 'expiring_soon'))
+  const expired = computed(() => items.value.filter((i) => i.status === 'expired'))
 
-  const progressPercent = computed(() => {
-    const { checked, total } = groceryProgress.value
-    if (!total) return 0
-    return Math.round((checked / total) * 100)
-  })
-
-  const progressText = computed(() => {
-    const { checked, total } = groceryProgress.value
-    return `${checked}/${total}`
+  const itemsByCategory = computed(() => {
+    return items.value.reduce(
+      (acc, item) => {
+        const cat = item.category ?? 'Autre'
+        if (!acc[cat]) acc[cat] = []
+        acc[cat].push(item)
+        return acc
+      },
+      {} as Record<string, InventoryItem[]>,
+    )
   })
 
   // ---- Actions ----
-  function isInInventory(name: string): boolean {
-    return inventory.value.some((i) => i.name === name)
-  }
-
-  function updateInventory(ingredient: Ingredient, isAdding: boolean): void {
-    if (isAdding) {
-      if (!isInInventory(ingredient.name)) {
-        inventory.value = [...inventory.value, { ...ingredient }]
-      }
-    } else {
-      inventory.value = inventory.value.filter((i) => i.name !== ingredient.name)
+  async function fetchInventory(filters?: InventoryFilters): Promise<void> {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await inventoryService.getInventory(filters)
+      items.value = response.data
+    } catch (e: any) {
+      error.value = e?.error ?? "Erreur lors du chargement de l'inventaire"
+    } finally {
+      loading.value = false
     }
   }
 
-  function toggleRecipeIngredients(recipeId: string): void {
-    const planningStore = usePlanningStore()
-    const recipe = planningStore.selectedRecipes.find((r) => r.id === recipeId)
-    if (!recipe) return
-    const allInStock = recipe.ingredients.every((ing) => isInInventory(ing.name))
-    if (allInStock) {
-      recipe.ingredients.forEach((ing) => {
-        inventory.value = inventory.value.filter((inv) => inv.name !== ing.name)
-      })
-    } else {
-      recipe.ingredients.forEach((ing) => {
-        if (!isInInventory(ing.name)) {
-          inventory.value = [...inventory.value, { ...ing }]
-        }
-      })
+  async function addItem(payload: CreateInventoryItem): Promise<void> {
+    const uiStore = useUiStore()
+    try {
+      const item = await inventoryService.addItem(payload)
+      items.value.push(item)
+    } catch (e: any) {
+      uiStore.notify(e?.error ?? "Erreur lors de l'ajout")
+    }
+  }
+
+  async function updateItem(id: string, payload: UpdateInventoryItem): Promise<void> {
+    const uiStore = useUiStore()
+    try {
+      const updated = await inventoryService.updateItem(id, payload)
+      const index = items.value.findIndex((i) => i.id === id)
+      if (index !== -1) items.value[index] = updated
+    } catch (e: any) {
+      uiStore.notify(e?.error ?? 'Erreur lors de la mise à jour')
+    }
+  }
+
+  async function removeItem(id: string): Promise<void> {
+    const uiStore = useUiStore()
+    try {
+      await inventoryService.removeItem(id)
+      items.value = items.value.filter((i) => i.id !== id)
+    } catch (e: any) {
+      uiStore.notify(e?.error ?? 'Erreur lors de la suppression')
     }
   }
 
   async function init(): Promise<void> {
-    inventory.value = await inventoryService.getInventory()
+    await fetchInventory()
   }
 
   return {
-    inventory,
-    progressPercent,
-    progressText,
-    isInInventory,
-    updateInventory,
-    toggleRecipeIngredients,
+    items,
+    loading,
+    error,
+    expiringSoon,
+    expired,
+    itemsByCategory,
+    fetchInventory,
+    addItem,
+    updateItem,
+    removeItem,
     init,
   }
 })

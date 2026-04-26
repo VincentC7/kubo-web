@@ -4,10 +4,12 @@ export type { UserRole }
 
 export interface User {
   id: string
+  email: string
   firstName: string
   lastName: string
-  email: string
   role: UserRole
+  roles: string[]
+  createdAt?: string
 }
 
 export interface UpdateProfilePayload {
@@ -20,6 +22,9 @@ export interface ChangePasswordPayload {
   newPassword: string
 }
 
+/**
+ * @deprecated Utiliser UserSettings de @/types/settings à la place
+ */
 export interface Settings {
   portions: number
   mealsGoal: number

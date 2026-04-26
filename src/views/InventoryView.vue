@@ -2,49 +2,49 @@
 /**
  * InventoryView — Vue inventaire des ingrédients en stock
  */
-import { computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
-import KuboButton from '@/components/ui/KuboButton.vue'
 import { storeToRefs } from 'pinia'
 import { useInventoryStore } from '@/stores/inventoryStore'
-import { usePlanningStore } from '@/stores/planningStore'
-import { useUiStore } from '@/stores/uiStore'
-import type { Ingredient } from '@/types/recipe'
+import type { CreateInventoryItem } from '@/types/inventory'
 
 const inventoryStore = useInventoryStore()
-const { inventory } = storeToRefs(inventoryStore)
-const { updateInventory, isInInventory } = inventoryStore
+const { items, loading, expiringSoon, expired, itemsByCategory } = storeToRefs(inventoryStore)
 
-const planningStore = usePlanningStore()
-const { selectedRecipes } = storeToRefs(planningStore)
+onMounted(() => inventoryStore.fetchInventory())
 
-const uiStore = useUiStore()
-const { notify } = uiStore
-
-interface MissingIngredient extends Ingredient {
-  recipeName: string
-}
-
-const missingIngredients = computed<MissingIngredient[]>(() => {
-  const missing: MissingIngredient[] = []
-  selectedRecipes.value.forEach((recipe) => {
-    recipe.ingredients.forEach((ing) => {
-      if (!isInInventory(ing.name) && !missing.find((m) => m.name === ing.name)) {
-        missing.push({ ...ing, recipeName: recipe.title })
-      }
-    })
-  })
-  return missing
+// ── Formulaire d'ajout ────────────────────────────────────────────────────────
+const showForm = ref(false)
+const form = ref<CreateInventoryItem>({
+  name: '',
+  quantity: 1,
+  unit: '',
+  category: '',
+  expiresAt: '',
 })
 
-function removeItem(item: Ingredient): void {
-  updateInventory(item, false)
-  notify(`${item.name} retiré du stock`)
+function resetForm() {
+  form.value = { name: '', quantity: 1, unit: '', category: '', expiresAt: '' }
+  showForm.value = false
 }
 
-function addMissing(item: Ingredient): void {
-  updateInventory(item, true)
-  notify(`${item.name} ajouté au stock`)
+async function submitAdd() {
+  if (!form.value.name.trim()) return
+  const payload: CreateInventoryItem = {
+    name: form.value.name.trim(),
+    quantity: form.value.quantity,
+    ...(form.value.unit ? { unit: form.value.unit } : {}),
+    ...(form.value.category ? { category: form.value.category } : {}),
+    ...(form.value.expiresAt ? { expiresAt: form.value.expiresAt } : {}),
+  }
+  await inventoryStore.addItem(payload)
+  resetForm()
+}
+
+function statusLabel(status: string | null) {
+  if (status === 'expiring_soon') return 'Bientôt périmé'
+  if (status === 'expired') return 'Périmé'
+  return null
 }
 </script>
 
@@ -60,77 +60,117 @@ function addMissing(item: Ingredient): void {
           <KuboIcon name="package" :size="18" class="inventory__stat-icon" />
           <div>
             <p class="inventory__stat-label">En stock</p>
-            <p class="inventory__stat-value" data-testid="inventory-count">
-              {{ inventory.length }}
-            </p>
+            <p class="inventory__stat-value" data-testid="inventory-count">{{ items.length }}</p>
           </div>
         </div>
-        <div class="inventory__stat-card inventory__stat-card--warn">
+        <div v-if="expiringSoon.length" class="inventory__stat-card inventory__stat-card--warn">
           <KuboIcon name="alert-triangle" :size="18" class="inventory__stat-icon--warn" />
           <div>
-            <p class="inventory__stat-label">Manquants</p>
-            <p class="inventory__stat-value">{{ missingIngredients.length }}</p>
+            <p class="inventory__stat-label">Bientôt périmés</p>
+            <p class="inventory__stat-value">{{ expiringSoon.length }}</p>
           </div>
         </div>
+        <div v-if="expired.length" class="inventory__stat-card inventory__stat-card--danger">
+          <KuboIcon name="x-circle" :size="18" class="inventory__stat-icon--danger" />
+          <div>
+            <p class="inventory__stat-label">Périmés</p>
+            <p class="inventory__stat-value">{{ expired.length }}</p>
+          </div>
+        </div>
+        <button class="inventory__add-btn" @click="showForm = !showForm">
+          <KuboIcon name="plus" :size="15" />
+          Ajouter
+        </button>
       </div>
     </header>
 
-    <!-- Current stock -->
-    <section v-if="inventory.length" class="inventory__section">
-      <h2 class="inventory__section-title">
-        <span class="inventory__section-dot" />
-        Stock Actuel
-      </h2>
-      <div class="inventory__grid">
-        <div v-for="item in inventory" :key="item.name" class="inventory__item">
-          <div class="inventory__item-icon">
-            <KuboIcon name="package" :size="16" />
+    <!-- Formulaire d'ajout -->
+    <div v-if="showForm" class="inventory__form-card">
+      <h2 class="inventory__form-title">Ajouter un ingrédient</h2>
+      <div class="inventory__form-row">
+        <input v-model="form.name" class="inventory__input" placeholder="Nom *" />
+        <input
+          v-model.number="form.quantity"
+          type="number"
+          min="0"
+          class="inventory__input inventory__input--sm"
+          placeholder="Qté"
+        />
+        <input
+          v-model="form.unit"
+          class="inventory__input inventory__input--sm"
+          placeholder="Unité"
+        />
+        <input v-model="form.category" class="inventory__input" placeholder="Catégorie" />
+        <input v-model="form.expiresAt" type="date" class="inventory__input" />
+      </div>
+      <div class="inventory__form-actions">
+        <button class="inventory__form-cancel" @click="resetForm">Annuler</button>
+        <button class="inventory__form-submit" :disabled="!form.name.trim()" @click="submitAdd">
+          Ajouter
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="loading" class="inventory__loading">
+      <span class="inventory__spinner" />
+    </div>
+
+    <!-- Liste par catégorie -->
+    <template v-else-if="items.length">
+      <div
+        v-for="(catItems, category) in itemsByCategory"
+        :key="category"
+        class="inventory__section"
+      >
+        <h2 class="inventory__section-title">
+          <span class="inventory__section-dot" />
+          {{ category }}
+        </h2>
+        <div class="inventory__grid">
+          <div
+            v-for="item in catItems"
+            :key="item.id"
+            :class="[
+              'inventory__item',
+              item.status === 'expired' && 'inventory__item--expired',
+              item.status === 'expiring_soon' && 'inventory__item--warn',
+            ]"
+          >
+            <div
+              :class="[
+                'inventory__item-icon',
+                item.status && 'inventory__item-icon--' + item.status,
+              ]"
+            >
+              <KuboIcon name="package" :size="16" />
+            </div>
+            <div class="inventory__item-info">
+              <span class="inventory__item-name">{{ item.name }}</span>
+              <span class="inventory__item-qty">
+                {{ item.quantity }}{{ item.unit ? ' ' + item.unit : '' }}
+              </span>
+              <span v-if="statusLabel(item.status)" class="inventory__item-status">
+                {{ statusLabel(item.status) }}
+              </span>
+            </div>
+            <button
+              class="inventory__item-remove"
+              title="Retirer"
+              @click="inventoryStore.removeItem(item.id)"
+            >
+              <KuboIcon name="x" :size="14" />
+            </button>
           </div>
-          <div class="inventory__item-info">
-            <span class="inventory__item-name">{{ item.name }}</span>
-            <span v-if="item.qty" class="inventory__item-qty">{{ item.qty }}</span>
-          </div>
-          <button class="inventory__item-remove" title="Retirer" @click="removeItem(item)">
-            <KuboIcon name="x" :size="14" />
-          </button>
         </div>
       </div>
-    </section>
+    </template>
 
-    <!-- Missing ingredients -->
-    <section v-if="missingIngredients.length" class="inventory__section">
-      <h2 class="inventory__section-title">
-        <span class="inventory__section-dot inventory__section-dot--warn" />
-        Ingrédients Manquants
-      </h2>
-      <p class="inventory__section-desc">Par rapport à votre menu de la semaine.</p>
-      <div class="inventory__grid">
-        <div
-          v-for="item in missingIngredients"
-          :key="item.name"
-          class="inventory__item inventory__item--missing"
-        >
-          <div class="inventory__item-icon inventory__item-icon--warn">
-            <KuboIcon name="alert-triangle" :size="16" />
-          </div>
-          <div class="inventory__item-info">
-            <span class="inventory__item-name">{{ item.name }}</span>
-            <span class="inventory__item-recipe">{{ item.recipeName }}</span>
-          </div>
-          <KuboButton size="sm" variant="primary" @click="addMissing(item)">
-            <KuboIcon name="plus" :size="14" />
-          </KuboButton>
-        </div>
-      </div>
-    </section>
-
-    <!-- Empty state -->
-    <div v-if="!inventory.length && !missingIngredients.length" class="inventory__empty">
+    <!-- État vide -->
+    <div v-else-if="!loading" class="inventory__empty">
       <KuboIcon name="box" :size="48" />
       <p>Votre inventaire est vide.</p>
-      <p class="inventory__empty-hint">
-        Ajoutez des recettes au menu puis cochez les ingrédients achetés dans Courses.
-      </p>
     </div>
   </div>
 </template>
@@ -170,7 +210,9 @@ function addMissing(item: Ingredient): void {
 
 .inventory__stats {
   display: flex;
+  align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .inventory__stat-card {
   display: flex;
@@ -185,11 +227,17 @@ function addMissing(item: Ingredient): void {
 .inventory__stat-card--warn {
   border-color: #fbbf24;
 }
+.inventory__stat-card--danger {
+  border-color: #ef4444;
+}
 .inventory__stat-icon {
   color: var(--kubo-green);
 }
 .inventory__stat-icon--warn {
   color: #f59e0b;
+}
+.inventory__stat-icon--danger {
+  color: #ef4444;
 }
 .inventory__stat-label {
   font-size: 9px;
@@ -202,6 +250,88 @@ function addMissing(item: Ingredient): void {
   font-size: 18px;
   font-weight: 900;
   color: var(--kubo-text);
+}
+
+.inventory__add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--kubo-green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-xl);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--transition-base);
+}
+.inventory__add-btn:hover {
+  opacity: 0.85;
+}
+
+/* Formulaire */
+.inventory__form-card {
+  background: var(--kubo-surface);
+  border: 1px solid var(--kubo-border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+.inventory__form-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--kubo-text);
+  margin-bottom: 16px;
+}
+.inventory__form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.inventory__input {
+  flex: 1;
+  min-width: 140px;
+  padding: 8px 12px;
+  background: var(--kubo-bg);
+  border: 1px solid var(--kubo-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--kubo-text);
+}
+.inventory__input--sm {
+  max-width: 100px;
+  flex: 0 0 100px;
+}
+.inventory__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.inventory__form-cancel {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--kubo-border);
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kubo-text-muted);
+  cursor: pointer;
+}
+.inventory__form-submit {
+  padding: 8px 20px;
+  background: var(--kubo-green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.inventory__form-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Section */
@@ -224,15 +354,6 @@ function addMissing(item: Ingredient): void {
   border-radius: 99px;
   flex-shrink: 0;
 }
-.inventory__section-dot--warn {
-  background: #f59e0b;
-}
-.inventory__section-desc {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--kubo-text-muted);
-  margin-bottom: 16px;
-}
 
 .inventory__grid {
   display: grid;
@@ -254,13 +375,21 @@ function addMissing(item: Ingredient): void {
   border-color: var(--kubo-border-mid);
   box-shadow: var(--shadow-card);
 }
-.inventory__item--missing {
+.inventory__item--warn {
   background: #fffbeb;
   border-color: #fde68a;
 }
-:global(.dark) .inventory__item--missing {
+.inventory__item--expired {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+:global(.dark) .inventory__item--warn {
   background: rgba(245, 158, 11, 0.1);
   border-color: rgba(245, 158, 11, 0.3);
+}
+:global(.dark) .inventory__item--expired {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .inventory__item-icon {
@@ -274,12 +403,19 @@ function addMissing(item: Ingredient): void {
   color: var(--kubo-green);
   flex-shrink: 0;
 }
-.inventory__item-icon--warn {
+.inventory__item-icon--expiring_soon {
   background: #fef3c7;
   color: #f59e0b;
 }
-:global(.dark) .inventory__item-icon--warn {
+.inventory__item-icon--expired {
+  background: #fef2f2;
+  color: #ef4444;
+}
+:global(.dark) .inventory__item-icon--expiring_soon {
   background: rgba(245, 158, 11, 0.15);
+}
+:global(.dark) .inventory__item-icon--expired {
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .inventory__item-info {
@@ -302,11 +438,13 @@ function addMissing(item: Ingredient): void {
   font-weight: 800;
   color: var(--kubo-green);
 }
-.inventory__item-recipe {
+.inventory__item-status {
   font-size: 10px;
-  font-weight: 600;
-  color: var(--kubo-text-muted);
-  font-style: italic;
+  font-weight: 700;
+  color: #f59e0b;
+}
+.inventory__item--expired .inventory__item-status {
+  color: #ef4444;
 }
 
 .inventory__item-remove {
@@ -322,13 +460,35 @@ function addMissing(item: Ingredient): void {
   justify-content: center;
   transition: all var(--transition-base);
   flex-shrink: 0;
+  opacity: 0.4;
 }
 .inventory__item-remove:hover {
   background: #fef2f2;
   color: #ef4444;
+  opacity: 1;
 }
 :global(.dark) .inventory__item-remove:hover {
   background: rgba(239, 68, 68, 0.15);
+}
+
+/* Loading */
+.inventory__loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+.inventory__spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--kubo-border);
+  border-top-color: var(--kubo-green);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Empty */
@@ -344,11 +504,5 @@ function addMissing(item: Ingredient): void {
 .inventory__empty p {
   font-size: 16px;
   font-weight: 700;
-}
-.inventory__empty-hint {
-  font-size: 13px;
-  font-weight: 500;
-  opacity: 0.7;
-  max-width: 400px;
 }
 </style>

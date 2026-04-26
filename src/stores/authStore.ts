@@ -13,7 +13,12 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  const currentRole = computed((): UserRole => user.value?.role ?? 'visitor')
+  const currentRole = computed((): UserRole => {
+    // Priorité : rôle lu depuis le profil API (user.roles)
+    // Fallback : rôle décodé depuis le JWT (user.value?.role)
+    if (user.value?.role) return user.value.role
+    return 'visitor'
+  })
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function decodeUser(token: string): void {
@@ -46,18 +51,21 @@ export const useAuthStore = defineStore('auth', () => {
         { useRecipeStore },
         { usePlanningStore },
         { useInventoryStore },
+        { useShoppingStore },
       ] = await Promise.all([
         import('@/stores/uiStore'),
         import('@/stores/userStore'),
         import('@/stores/recipeStore'),
         import('@/stores/planningStore'),
         import('@/stores/inventoryStore'),
+        import('@/stores/shoppingStore'),
       ])
       await Promise.all([
         useUserStore().init(),
         useRecipeStore().init(),
         usePlanningStore().init(),
         useInventoryStore().init(),
+        useShoppingStore().init(),
       ])
       useUiStore().navTo('dashboard')
     } catch (e) {

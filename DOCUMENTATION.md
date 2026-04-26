@@ -1,7 +1,7 @@
 # Kubo Web — Documentation technique complète
 
-> Générée le 25 avril 2026  
-> Stack : Vue 3 · TypeScript · Pinia · Vite · Playwright
+> Mise à jour le 26 avril 2026  
+> Stack : Vue 3 · TypeScript · Pinia · Vite · Vitest · Playwright
 
 ---
 
@@ -17,8 +17,9 @@
 8. [Data](#8-data)
 9. [Vues](#9-vues)
 10. [Composants](#10-composants)
-11. [Tests E2E (Playwright)](#11-tests-e2e-playwright)
-12. [Variables d'environnement](#12-variables-denvironnement)
+11. [Tests unitaires (Vitest)](#11-tests-unitaires-vitest)
+12. [Tests E2E (Playwright)](#12-tests-e2e-playwright)
+13. [Variables d'environnement](#13-variables-denvironnement)
 
 ---
 
@@ -35,9 +36,9 @@ Kubo Web est une **Single Page Application (SPA)** de gestion culinaire : catalo
 | Routing          | **Virtuel** — aucun Vue Router, navigation via `uiStore.currentView` |
 | Backend          | Symfony + LexikJWT (tokens stockés en `localStorage`)                |
 | Auth tokens      | `kubo_token` (access) · `kubo_refresh_token` (refresh)               |
-| Services mockés  | `planningService`, `inventoryService`, `settingsService`             |
+| Tests unitaires  | Vitest — stores et services                                          |
+| Tests E2E        | Playwright — auth persistée dans `playwright/.auth/user.json`        |
 | Icons saison     | OpenMoji 15 (CC BY-SA 4.0), SVG locaux                               |
-| Tests            | Playwright — auth persistée dans `playwright/.auth/user.json`        |
 
 ---
 
@@ -48,7 +49,7 @@ src/
 ├── main.ts                  # Bootstrap Vue + Pinia
 ├── App.vue                  # Racine : routing virtuel + init auth
 ├── types/                   # Interfaces TypeScript
-├── services/                # Couche API + logique métier
+├── services/                # Couche API (appels HTTP réels via httpClient)
 ├── stores/                  # Stores Pinia (état global)
 ├── composables/             # Logique réutilisable Vue
 ├── utils/                   # Fonctions pures
@@ -119,18 +120,13 @@ interface AuthState {
 type UserRole = 'user' | 'admin' // mappé depuis ROLE_USER / ROLE_ADMIN Symfony
 
 interface User {
-  id: number
+  id: string // UUID Symfony
   email: string
-  username: string
-  roles: string[] // rôles bruts Symfony
-  createdAt: string
-  avatar?: string // URL ou null
-}
-
-interface UserProfile {
-  // sous-ensemble affiché dans ProfileView
-  username: string
-  email: string
+  firstName?: string
+  lastName?: string
+  role: UserRole
+  roles: string[] // rôles bruts Symfony ex. ['ROLE_USER']
+  createdAt?: string
   avatar?: string
 }
 ```
@@ -155,7 +151,7 @@ interface Nutrition {
 }
 
 interface Recipe {
-  id: number
+  id: number | string
   title: string
   description: string
   imageUrl?: string
@@ -167,38 +163,110 @@ interface Recipe {
   ingredients: Ingredient[]
   steps: Step[]
   nutrition?: Nutrition
-  season?: string[] // ex. ['spring', 'summer']
-}
-
-// DTOs API — les tableaux peuvent être envoyés en array OU en Record indexé
-interface RecipeCreateDTO {
-  /* mêmes champs sans id */
-}
-interface RecipeUpdateDTO {
-  /* tous champs optionnels */
+  season?: string[]
 }
 ```
 
-> **Note** : `recipeService` expose une méthode `toArray()` pour normaliser
-> les champs `ingredients`, `steps`, `nutrition` qui arrivent parfois comme
-> `{ "0": ..., "1": ... }` depuis l'API Symfony.
+> **Note** : `recipeService` expose une méthode `toArray()` pour normaliser les champs `ingredients`, `steps`, `nutrition` qui arrivent parfois comme `{ "0": ..., "1": ... }` depuis l'API Symfony.
 
 ### `src/types/planning.ts`
 
 ```typescript
-type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
-
 interface PlanningEntry {
-  id: number
-  date: string // ISO 8601
-  mealType: MealType
-  recipeId: number
-  servings: number
+  id: string
+  week: string // ex. '2026-W18'
+  recette: { id: string; title: string }
+  portions: number
+  done: boolean
 }
 
-interface WeeklyPlanning {
-  weekStart: string // ISO 8601 lundi de la semaine
-  entries: PlanningEntry[]
+interface PlanningMeta {
+  week: string
+  totalEntries: number
+}
+
+interface PlanningResponse {
+  data: PlanningEntry[]
+  meta: PlanningMeta
+}
+
+interface CreatePlanningEntry {
+  recetteId: string
+  week: string
+  portions: number
+}
+type UpdatePlanningEntry = Partial<{ portions: number; done: boolean }>
+```
+
+### `src/types/shopping.ts`
+
+```typescript
+interface ShoppingItem {
+  id: string
+  ingredientName: string
+  quantity: number | null
+  unit: string | null
+  category: string | null
+  checked: boolean
+  source: 'planning' | 'manual'
+}
+
+interface ShoppingList {
+  id: string
+  week: string
+  items: ShoppingItem[]
+}
+
+interface CreateShoppingItem {
+  week: string
+  ingredientName: string
+  quantity?: number
+  unit?: string
+  category?: string
+}
+```
+
+### `src/types/inventory.ts`
+
+```typescript
+type InventoryItemStatus = 'ok' | 'expiring_soon' | 'expired' | null
+
+interface InventoryItem {
+  id: string
+  name: string
+  quantity: number
+  unit: string | null
+  category: string | null
+  expiresAt: string | null // 'YYYY-MM-DD'
+  daysUntilExpiry: number | null
+  status: InventoryItemStatus
+}
+
+interface CreateInventoryItem {
+  name: string
+  quantity: number
+  unit?: string
+  category?: string
+  expiresAt?: string
+}
+
+type UpdateInventoryItem = Partial<CreateInventoryItem>
+
+interface InventoryFilters {
+  category?: string
+  expiring_soon?: boolean
+}
+```
+
+### `src/types/settings.ts`
+
+```typescript
+interface UserSettings {
+  portionsDefault: number
+  mealsGoal: number
+  viewMode: 'week' | 'list'
+  dietaryPrefs: string[]
+  notifications: { planningReminder: boolean; expiryAlert: boolean }
 }
 ```
 
@@ -206,9 +274,9 @@ interface WeeklyPlanning {
 
 ## 4. Services
 
-### `src/services/httpClient.ts`
+Tous les services utilisent `httpClient` (Axios préconfiguré). **Aucun service n'est mocké** — tous effectuent de vrais appels HTTP.
 
-Axios instance préconfigurée.
+### `src/services/httpClient.ts`
 
 | Aspect               | Détail                                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -220,8 +288,6 @@ Axios instance préconfigurée.
 ---
 
 ### `src/services/tokenService.ts`
-
-Gestion bas niveau des tokens JWT dans `localStorage`.
 
 | Méthode                 | Description                                           |
 | ----------------------- | ----------------------------------------------------- |
@@ -241,19 +307,16 @@ Gestion bas niveau des tokens JWT dans `localStorage`.
 | `register(payload)`     | `POST /register`      | Pas de retour (void)                                      |
 | `refresh(refreshToken)` | `POST /token/refresh` | Corps `{ refresh_token }`, retourne nouveaux `AuthTokens` |
 
-> Pas de méthode `logout()` dans authService — le logout est géré par `tokenService.clearTokens()` directement depuis `authStore`.
-
 ---
 
 ### `src/services/userService.ts`
 
 | Méthode                   | Endpoint              | Description                                                              |
 | ------------------------- | --------------------- | ------------------------------------------------------------------------ |
-| `getUserFromToken()`      | —                     | Décode le JWT local, retourne `{ id, email, role }` (pas d'appel réseau) |
+| `getUser()`               | `GET /user`           | Retourne le profil complet `User` depuis l'API                           |
+| `getUserFromToken()`      | —                     | Décode le JWT local, retourne `{ id, email, role, roles }` (sans réseau) |
 | `updateProfile(payload)`  | `PATCH /user`         | Corps `UpdateProfilePayload`, retourne `{ firstName, lastName, email }`  |
 | `changePassword(payload)` | `POST /user/password` | Corps `ChangePasswordPayload` (void)                                     |
-
-> `firstName`/`lastName` ne sont **pas** dans le JWT Symfony — ils sont renseignés uniquement après un `PATCH /user` réussi.
 
 ---
 
@@ -261,41 +324,54 @@ Gestion bas niveau des tokens JWT dans `localStorage`.
 
 | Méthode                            | Endpoint             | Description                                                                                    |
 | ---------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------- |
-| `getRecipes(page, limit)`          | `GET /recettes`      | Params : `page`, `limit`. Retourne `PaginatedResponse<RecipeListItem>`                         |
+| `getRecipes(page, limit, filters)` | `GET /recettes`      | Params : `page`, `limit`, filtres optionnels. Retourne `PaginatedResponse<RecipeListItem>`     |
 | `getRecipeById(id)`                | `GET /recettes/{id}` | Recette détaillée mappée depuis `RecetteDetailDto`                                             |
 | `getCatalogue(page, limit, week?)` | `GET /catalogue`     | Params : `page`, `limit`, `week?`. Retourne `CatalogueResponse` avec `selectionSize` et `week` |
 | `toArray(value)`                   | —                    | Helper interne : normalise array ou Record indexé → array                                      |
 
-> Pas de CRUD admin dans ce service — `createRecipe`, `updateRecipe`, `deleteRecipe` n'existent pas.
+---
+
+### `src/services/planningService.ts`
+
+| Méthode                 | Endpoint                | Description                               |
+| ----------------------- | ----------------------- | ----------------------------------------- |
+| `getPlanning(week)`     | `GET /planning`         | Param `week`. Retourne `PlanningResponse` |
+| `addEntry(payload)`     | `POST /planning`        | Retourne `PlanningEntry`                  |
+| `updateEntry(id, data)` | `PATCH /planning/{id}`  | Retourne `PlanningEntry` mis à jour       |
+| `removeEntry(id)`       | `DELETE /planning/{id}` | void                                      |
 
 ---
 
-### `src/services/planningService.ts` ⚠️ mocké en mémoire
+### `src/services/shoppingService.ts`
 
-| Méthode              | Description                                                   |
-| -------------------- | ------------------------------------------------------------- |
-| `getPlanning()`      | Retourne `WeeklyData` (toutes les semaines, objet en mémoire) |
-| `savePlanning(data)` | Remplace `WeeklyData` en mémoire (pas d'appel réseau)         |
-
----
-
-### `src/services/inventoryService.ts` ⚠️ mocké en mémoire
-
-| Méthode                | Description                    |
-| ---------------------- | ------------------------------ |
-| `getInventory()`       | Retourne la liste des items    |
-| `addItem(item)`        | Ajoute un item                 |
-| `updateItem(id, data)` | Met à jour quantité/expiration |
-| `removeItem(id)`       | Supprime un item               |
+| Méthode                      | Endpoint                      | Description                                     |
+| ---------------------------- | ----------------------------- | ----------------------------------------------- |
+| `getList(week)`              | `GET /shopping`               | Retourne `{ data: ShoppingList \| null }`       |
+| `generateFromPlanning(week)` | `POST /shopping/generate`     | Retourne `ShoppingList` générée depuis planning |
+| `addItem(payload)`           | `POST /shopping`              | Retourne `ShoppingItem`                         |
+| `updateItem(id, payload)`    | `PATCH /shopping/items/{id}`  | Retourne `ShoppingItem` mis à jour              |
+| `removeItem(id)`             | `DELETE /shopping/items/{id}` | void                                            |
+| `clearList(week)`            | `DELETE /shopping`            | Vide la liste de la semaine                     |
 
 ---
 
-### `src/services/settingsService.ts` ⚠️ mocké en mémoire
+### `src/services/inventoryService.ts`
 
-| Méthode                | Description                          |
-| ---------------------- | ------------------------------------ |
-| `getSettings()`        | Retourne les préférences utilisateur |
-| `updateSettings(data)` | Met à jour les préférences           |
+| Méthode                 | Endpoint                 | Description                         |
+| ----------------------- | ------------------------ | ----------------------------------- |
+| `getInventory(filters)` | `GET /inventory`         | Retourne `InventoryResponse`        |
+| `addItem(payload)`      | `POST /inventory`        | Retourne `InventoryItem`            |
+| `updateItem(id, data)`  | `PATCH /inventory/{id}`  | Retourne `InventoryItem` mis à jour |
+| `removeItem(id)`        | `DELETE /inventory/{id}` | void                                |
+
+---
+
+### `src/services/settingsService.ts`
+
+| Méthode                | Endpoint          | Description                        |
+| ---------------------- | ----------------- | ---------------------------------- |
+| `getSettings()`        | `GET /settings`   | Retourne `UserSettings`            |
+| `updateSettings(data)` | `PATCH /settings` | Retourne `UserSettings` mis à jour |
 
 ---
 
@@ -346,13 +422,14 @@ error: string | null
 - `currentRole`: `UserRole` — `user.role` ou `'visitor'` si non connecté
 
 **Actions**
-| Action | Description |
-|---|---|
-| `tryRefresh()` | Appelé au boot dans `App.vue` — vérifie/rafraîchit le token silencieusement |
-| `login(credentials)` | `POST /login` → stocke les tokens, décode le user, init les stores protégés, navigue vers `dashboard` |
-| `register(credentials)` | `POST /register` (void) → navigue vers `login` |
-| `logout()` | Efface les tokens, remet `user` à null, navigue vers `catalog` |
-| `forceLogout()` | Idem mais appelé par `httpClient` en cas de refresh échoué (sans await) |
+
+| Action                  | Description                                                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `tryRefresh()`          | Appelé au boot dans `App.vue` — vérifie/rafraîchit le token silencieusement                                           |
+| `login(credentials)`    | `POST /login` → stocke les tokens, décode le user, initialise `userStore` + `shoppingStore`, navigue vers `dashboard` |
+| `register(credentials)` | `POST /register` (void) → navigue vers `login`                                                                        |
+| `logout()`              | Efface les tokens, remet `user` à null, navigue vers `catalog`                                                        |
+| `forceLogout()`         | Idem mais appelé par `httpClient` en cas de refresh échoué (sans await)                                               |
 
 ---
 
@@ -362,22 +439,25 @@ error: string | null
 
 ```typescript
 user: User | null
-portions: number // défaut : 2
-mealsGoal: number // défaut : 5
-viewMode: 'week' | 'list'
+settings: UserSettings | null
 ```
 
-**Getters** : aucun getter calculé (pas de `userRole`, `isAdmin`, `displayName` dans ce store — le rôle est dans `authStore.currentRole`)
+**Getters (computed depuis settings)**
+
+- `portions` — `settings.portionsDefault` ou `2` par défaut
+- `mealsGoal` — `settings.mealsGoal` ou `5` par défaut
+- `viewMode` — `settings.viewMode` ou `'week'` par défaut
 
 **Actions**
-| Action | Description |
-|---|---|
-| `init()` | Décode le user depuis le JWT via `userService.getUserFromToken()` + charge les settings via `settingsService.getSettings()` |
-| `updateProfile(payload)` | `PATCH /user` → met à jour `user.firstName/lastName/email` localement |
-| `changePassword(payload)` | `POST /user/password` (délègue à `userService`) |
-| `updatePortions(delta)` | Incrémente/décrémente `portions` (min 1) |
-| `updateMealsGoal(delta)` | Incrémente/décrémente `mealsGoal` (min 1) |
-| `switchViewMode(mode)` | Change `viewMode` |
+
+| Action                    | Description                                                            |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `init()`                  | `GET /user` (avec fallback `getUserFromToken()`) + `GET /settings`     |
+| `updateProfile(payload)`  | `PATCH /user` → met à jour `user.firstName/lastName/email` localement  |
+| `changePassword(payload)` | `POST /user/password`                                                  |
+| `updatePortions(delta)`   | `PATCH /settings` avec `portionsDefault` incrémenté/décrémenté (min 1) |
+| `updateMealsGoal(delta)`  | `PATCH /settings` avec `mealsGoal` incrémenté/décrémenté (min 1)       |
+| `switchViewMode(mode)`    | `PATCH /settings` avec `viewMode`                                      |
 
 ---
 
@@ -393,8 +473,8 @@ filters: { category: string; maxTime: number; activeTags: string[]; search: stri
 catalogPage: number
 catalogPages: number
 catalogLoading: boolean
-weeklySelectionSize: number   // N premières recettes = sélection de la semaine
-currentWeek: string           // clé semaine retournée par /catalogue
+weeklySelectionSize: number
+currentWeek: string
 ```
 
 **Getters**
@@ -407,16 +487,17 @@ currentWeek: string           // clé semaine retournée par /catalogue
 - `catalogHasMore` — `catalogPage < catalogPages`
 
 **Actions**
-| Action | Description |
-|---|---|
-| `init()` | `GET /catalogue` (page 1) — guard anti-double-appel |
-| `loadMoreRecipes()` | `GET /catalogue` (page suivante) — append à `recipes` |
-| `fetchDetail(id)` | `GET /recettes/{id}` — enrichit la recette dans `recipes[]`, avec cache en mémoire |
-| `setFilterCategory(cat)` | Met à jour `filters.category` |
-| `setFilterMaxTime(time)` | Met à jour `filters.maxTime` |
-| `toggleFilterTag(tag)` | Ajoute/retire un tag de `filters.activeTags` |
-| `setSearch(value)` | Met à jour `filters.search` |
-| `resetFilters()` | Réinitialise tous les filtres |
+
+| Action                   | Description                                                             |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `init()`                 | `GET /catalogue` (page 1) — guard anti-double-appel                     |
+| `loadMoreRecipes()`      | `GET /catalogue` (page suivante) — append à `recipes`                   |
+| `fetchDetail(id)`        | `GET /recettes/{id}` — enrichit la recette dans `recipes[]`, avec cache |
+| `setFilterCategory(cat)` | Met à jour `filters.category`                                           |
+| `setFilterMaxTime(time)` | Met à jour `filters.maxTime`                                            |
+| `toggleFilterTag(tag)`   | Ajoute/retire un tag de `filters.activeTags`                            |
+| `setSearch(value)`       | Met à jour `filters.search`                                             |
+| `resetFilters()`         | Réinitialise tous les filtres                                           |
 
 ---
 
@@ -425,29 +506,65 @@ currentWeek: string           // clé semaine retournée par /catalogue
 **État**
 
 ```typescript
-weeklyData: WeeklyData // reactive — Record<weekKey, Record<recipeId, WeekEntry>>
-currentDate: Date // date de référence pour la semaine affichée
+entries: PlanningEntry[]   // liste des recettes planifiées pour la semaine courante
+meta: PlanningMeta | null
+currentDate: Date
+loading: boolean
+error: string | null
 ```
 
 **Getters**
 
-- `weekKey` — clé semaine courante format `"2026-W17"` (ISO)
+- `weekKey` — clé semaine courante format `"2026-W18"` (ISO)
 - `weekRange` / `periodLabel` — plage FR ex: `"21 avr. — 27 avr."`
-- `selectedRecipes` — recettes ayant `selected: true` pour la semaine courante
+- `selectedRecipes` — recettes ayant une `PlanningEntry` pour la semaine, enrichies via `recipeStore`
 - `doneRecipes` — sous-ensemble de `selectedRecipes` avec `done: true`
-- `nutritionTotals` — somme `{ prot, fat, carb }` ou `null` si aucune recette sélectionnée
-- `totalPrice`, `avgPrice` — calculés depuis `recipesWithPrice`
+- `nutritionTotals` — somme `{ prot, fat, carb }` ou `null` si aucune recette
+- `totalPrice`, `avgPrice`
 
 **Actions**
-| Action | Description |
-|---|---|
-| `init()` | Charge `WeeklyData` via `planningService.getPlanning()` |
-| `changePeriod(delta)` | Décale `currentDate` de ±`delta` semaines |
-| `toggleRecipe(id)` | Sélectionne/désélectionne une recette ; désélectionner remet `done` à false |
-| `markAsDone(id)` | Toggle `done` + toast si passage à true |
-| `clearPlanning()` | Vide la semaine courante + toast |
-| `isSelected(id)` | Getter booléen (non réactif) |
-| `isDone(id)` | Getter booléen (non réactif) |
+
+| Action                | Description                                                                                                                       |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `init()`              | `GET /planning?week=...` → charge `entries` et `meta`                                                                             |
+| `changePeriod(delta)` | Décale `currentDate` de ±`delta` semaines puis rappelle `init()`                                                                  |
+| `toggleRecipe(id)`    | Ajoute (`POST /planning`) ou retire (`DELETE /planning/{id}`) une recette ; **puis régénère automatiquement la liste de courses** |
+| `markAsDone(id)`      | `PATCH /planning/{id}` → toggle `done` + toast                                                                                    |
+| `clearPlanning()`     | `DELETE` sur toutes les entries + toast ; **puis régénère automatiquement la liste de courses**                                   |
+| `isSelected(id)`      | Getter booléen non réactif                                                                                                        |
+| `isDone(id)`          | Getter booléen non réactif                                                                                                        |
+
+> **Régénération automatique des courses** : `toggleRecipe` et `clearPlanning` appellent `shoppingStore.generate()` après modification du planning (import dynamique pour éviter la dépendance circulaire).
+
+---
+
+### `src/stores/shoppingStore.ts`
+
+**État**
+
+```typescript
+list: ShoppingList | null
+loading: boolean
+error: string | null
+```
+
+**Getters**
+
+- `itemsByCategory` — `Record<string, ShoppingItem[]>` groupé par catégorie
+- `checkedCount` — nombre d'items cochés
+- `totalCount` — nombre total d'items
+
+**Actions**
+
+| Action             | Description                                                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `init()`           | Alias de `fetchList()`                                                                                                 |
+| `fetchList(week?)` | `GET /shopping` — charge la liste existante ou null                                                                    |
+| `generate()`       | `POST /shopping/generate` — génère la liste depuis le planning courant                                                 |
+| `addItem(payload)` | `POST /shopping` — ajoute un item manuellement                                                                         |
+| `toggleItem(id)`   | `PATCH /shopping/items/{id}` — coche/décoche un item (remplace l'item dans le tableau pour garantir la réactivité Vue) |
+| `removeItem(id)`   | `DELETE /shopping/items/{id}` — supprime un item                                                                       |
+| `clearList()`      | `DELETE /shopping` — vide toute la liste                                                                               |
 
 ---
 
@@ -457,17 +574,24 @@ currentDate: Date // date de référence pour la semaine affichée
 
 ```typescript
 items: InventoryItem[]
-isLoading: boolean
+loading: boolean
 error: string | null
 ```
 
 **Getters**
 
-- `expiringSoon` — items expirant dans les 3 jours
-- `expired` — items déjà expirés
-- `itemsByCategory` — groupés par catégorie
+- `expiringSoon` — items avec `status === 'expiring_soon'`
+- `expired` — items avec `status === 'expired'`
+- `itemsByCategory` — `Record<string, InventoryItem[]>` groupé par catégorie
 
-**Actions** : `fetchInventory()`, `addItem()`, `updateItem()`, `removeItem()`
+**Actions**
+
+| Action                     | Description                          |
+| -------------------------- | ------------------------------------ |
+| `fetchInventory(filters?)` | `GET /inventory` — charge les items  |
+| `addItem(payload)`         | `POST /inventory` — ajoute un item   |
+| `updateItem(id, data)`     | `PATCH /inventory/{id}` — met à jour |
+| `removeItem(id)`           | `DELETE /inventory/{id}` — supprime  |
 
 ---
 
@@ -478,21 +602,24 @@ Store de navigation virtuelle et d'état UI global.
 **État**
 
 ```typescript
-currentView: ViewName         // 'dashboard' | 'catalog' | 'planning' | ...
+currentView: ViewName
 isAuthModalOpen: boolean
 authModalMode: 'login' | 'register'
 toast: { message: string; type: 'success'|'error'|'info'; visible: boolean } | null
 isSidebarCollapsed: boolean
+isDarkMode: boolean
 ```
 
 **Actions**
-| Action | Description |
-|---|---|
-| `navigateTo(view)` | Change `currentView` |
-| `openAuthModal(mode?)` | Ouvre la modale d'auth |
-| `closeAuthModal()` | Ferme la modale d'auth |
-| `showToast(message, type)` | Affiche un toast (auto-hide 3 s) |
-| `toggleSidebar()` | Collapse/expand la sidebar |
+
+| Action                 | Description                      |
+| ---------------------- | -------------------------------- |
+| `navTo(view)`          | Change `currentView`             |
+| `openAuthModal(mode?)` | Ouvre la modale d'auth           |
+| `closeAuthModal()`     | Ferme la modale d'auth           |
+| `notify(message)`      | Affiche un toast (auto-hide 3 s) |
+| `setDarkMode(bool)`    | Active/désactive le mode sombre  |
+| `toggleSidebar()`      | Collapse/expand la sidebar       |
 
 ---
 
@@ -501,15 +628,12 @@ isSidebarCollapsed: boolean
 **État**
 
 ```typescript
-currentSeason: Season         // 'spring' | 'summer' | 'autumn' | 'winter'
+currentSeason: Season
 seasonalProducts: { fruits: SeasonalProduct[]; vegetables: SeasonalProduct[] }
 isLoading: boolean
 ```
 
-**Getters**
-
-- `seasonLabel` — libellé FR de la saison courante
-- `seasonEmoji` — emoji de la saison
+**Getters** : `seasonLabel`, `seasonEmoji`
 
 **Actions** : `fetchSeasonalProducts()`, `refreshSeason()`
 
@@ -521,12 +645,12 @@ isLoading: boolean
 
 ```typescript
 function useFeatureAccess(): {
-  canAccess: (feature: string) => boolean // utilise userStore.userRole
-  requireAuth: (feature: string) => boolean // ouvre AuthModal si besoin
+  canAccess: (feature: string) => boolean
+  requireAuth: (feature: string) => boolean
 }
 ```
 
-Wrapper réactif autour de `featureAccessService.canAccess()`.
+Wrapper réactif autour de `featureAccessService.canAccess()`, utilise `authStore.currentRole`.
 
 ---
 
@@ -565,7 +689,6 @@ Wrapper réactif sur `seasonStore`.
 
 ```typescript
 function getCurrentSeason(): Season
-// Calcul pur basé sur Date.now() :
 // Déc–Fév → 'winter' | Mar–Mai → 'spring' | Juin–Août → 'summer' | Sep–Nov → 'autumn'
 
 function getSeasonLabel(season: Season): string
@@ -582,7 +705,6 @@ function getSeasonEmoji(season: Season): string
 ```typescript
 function getAvatarUrl(user: User | null): string
 // Retourne user.avatar si défini, sinon génère une URL via ui-avatars.com
-// avec les initiales du username.
 
 function getInitials(name: string): string
 // Extrait jusqu'à 2 initiales (ex. "Jean Dupont" → "JD")
@@ -604,12 +726,12 @@ function getSeasonImage(nom: string, type: 'legume' | 'fruit'): SeasonImageEntry
 
 **Logique de résolution** :
 
-1. Normalisation du nom : `toLowerCase()` + suppression diacritiques + trim
+1. Normalisation : `toLowerCase()` + suppression diacritiques + trim
 2. Recherche exacte dans la table
 3. Recherche partielle (inclusion dans les deux sens)
 4. Fallback : `url: ''` + emoji `🍎` (fruit) ou `🌿` (légume)
 
-**Couverture** : ~45 légumes et ~35 fruits, avec aliases (ex. `butternut` → SVG `courge`, `potiron` → SVG `potimarron`).
+**Couverture** : ~45 légumes et ~35 fruits, avec aliases (ex. `butternut` → SVG `courge`).
 
 ---
 
@@ -620,7 +742,6 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 ### `DashboardView.vue`
 
 - **Accès** : tous (visiteurs voient une version réduite)
-- **Composants** : `DashboardSeasonSection`, `KuboCard`, `KuboButton`
 - **Stores** : `seasonStore`, `recipeStore`, `authStore`
 - **Contenu** : section saison courante + suggestions de recettes de saison + CTA connexion pour visiteurs
 
@@ -629,7 +750,6 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 ### `CatalogView.vue`
 
 - **Accès** : tous
-- **Composants** : `RecipeCard`, `FilterModal`, `KuboInput`, `KuboButton`, `KuboTag`
 - **Stores** : `recipeStore`, `uiStore`, `userStore`
 - **Fonctionnalités** : recherche texte, filtres (tags, difficulté, saison), pagination, ouverture `RecipeDetailModal`
 
@@ -638,45 +758,48 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 ### `PlanningView.vue`
 
 - **Accès** : `user`, `admin`
-- **Composants** : `PlanningCard`, `KuboButton`, `KuboIcon`
 - **Stores** : `planningStore`, `recipeStore`
-- **Fonctionnalités** : navigation semaine (prev/next), affichage 7 jours × 4 repas, ajout/suppression d'entrées
+- **Fonctionnalités** : navigation semaine (prev/next), affichage des recettes planifiées, ajout/suppression via `toggleRecipe`
 
 ---
 
 ### `GroceriesView.vue`
 
 - **Accès** : `user`, `admin`
-- **Composants** : `GroceryGroup`, `KuboButton`, `KuboIcon`
-- **Stores** : `planningStore`, `recipeStore`
-- **Fonctionnalités** : génération automatique de la liste de courses depuis le planning de la semaine, groupement par catégorie d'ingrédient, cochage des items
+- **Stores** : `shoppingStore`, `planningStore`
+- **Comportement au montage** : `fetchList()` → si aucune liste, `generate()` automatiquement
+- **Régénération automatique** : toute modification du planning (`toggleRecipe`, `clearPlanning`) déclenche `generate()` en arrière-plan
+- **Fonctionnalités** : liste groupée par catégorie, cochage/décochage des items, ajout manuel, suppression, bouton "Regénérer" pour forcer une mise à jour
 
 ---
 
 ### `InventoryView.vue`
 
 - **Accès** : `user`, `admin`
-- **Composants** : `KuboInput`, `KuboButton`, `KuboTag`, `KuboCard`
 - **Stores** : `inventoryStore`
-- **Fonctionnalités** : liste du garde-manger, ajout/modification/suppression d'items, alertes expiration
+- **Comportement au montage** : `fetchInventory()` automatique
+- **Fonctionnalités** :
+  - Liste des items groupés par catégorie
+  - Badges en stock / bientôt périmés / périmés dans le header
+  - Formulaire d'ajout inline (nom, quantité, unité, catégorie, date d'expiration)
+  - Suppression d'items
+  - Mise en évidence visuelle des items `expiring_soon` (jaune) et `expired` (rouge)
 
 ---
 
 ### `SettingsView.vue`
 
 - **Accès** : `user`, `admin`
-- **Composants** : `KuboInput`, `KuboButton`, `KuboCard`
-- **Stores** : n/a (appelle `settingsService` directement via le store n/a)
-- **Fonctionnalités** : préférences alimentaires, notifications (toutes mockées)
+- **Stores** : `userStore`
+- **Fonctionnalités** : préférences alimentaires, portions par défaut, objectif repas, mode d'affichage, notifications
 
 ---
 
 ### `ProfileView.vue`
 
 - **Accès** : `user`, `admin`
-- **Composants** : `KuboInput`, `KuboButton`, `KuboCard`, `KuboProgressBar`
 - **Stores** : `userStore`, `authStore`
-- **Fonctionnalités** : affichage/édition du profil, changement de mot de passe, upload avatar, règles de mot de passe via `usePasswordRules`
+- **Fonctionnalités** : affichage/édition du profil, changement de mot de passe (icône cadenas sur les champs), règles de mot de passe via `usePasswordRules`
 
 ---
 
@@ -687,32 +810,24 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 #### `AppSidebar.vue`
 
 - Navigation principale desktop
-- Props : aucune
-- Émet : aucun
 - Stores : `uiStore`, `authStore`, `userStore`
-- Affiche les liens de navigation, collapse/expand, avatar utilisateur, bouton login/logout
 - `data-testid` : `sidebar`, `nav-*`, `sidebar-toggle`
 
 #### `AppHeader.vue`
 
 - Barre supérieure mobile et desktop
 - Stores : `uiStore`, `authStore`, `userStore`
-- Affiche le titre de la vue courante, bouton profil, bouton auth
-- `data-testid` : `header`, `header-title`, `header-auth-btn`
 
 #### `AppBottomNav.vue`
 
 - Navigation bas d'écran mobile uniquement (`md:hidden`)
 - Stores : `uiStore`, `authStore`
-- 5 onglets : Dashboard, Catalog, Planning, Groceries, Inventory
 - `data-testid` : `bottom-nav`, `bottom-nav-*`
 
 #### `ToastNotification.vue`
 
-- Toast global (succès / erreur / info)
+- Toast global (succès / erreur / info), auto-hide 3 s
 - Stores : `uiStore`
-- Auto-hide après 3 s, transition fade
-- `data-testid` : `toast`, `toast-message`
 
 ---
 
@@ -720,24 +835,16 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 
 #### `AuthModal.vue`
 
-- Modale d'authentification
-- Stores : `uiStore`
-- Affiche `AuthLoginForm` ou `AuthRegisterForm` selon `uiStore.authModalMode`
-- `data-testid` : `auth-modal`, `auth-modal-close`
+- Modale d'authentification — affiche `AuthLoginForm` ou `AuthRegisterForm`
 
 #### `AuthLoginForm.vue`
 
-- Formulaire de connexion
 - Stores : `authStore`, `uiStore`
-- Emits : `success`, `switch-to-register`
 - `data-testid` : `login-form`, `login-email`, `login-password`, `login-submit`
 
 #### `AuthRegisterForm.vue`
 
-- Formulaire d'inscription
-- Stores : `authStore`, `uiStore`
 - Composable : `usePasswordRules`
-- Emits : `success`, `switch-to-login`
 - `data-testid` : `register-form`, `register-email`, `register-username`, `register-password`, `register-submit`
 
 ---
@@ -746,46 +853,18 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 
 #### `RecipeCard.vue`
 
-- Carte de recette dans la grille du catalogue
-- Props : `recipe: Recipe`, `showActions?: boolean` (admin)
-- Emits : `click`, `edit`, `delete`
-- `data-testid` : `recipe-card-{id}`, `recipe-card-title`, `recipe-card-tags`
+- Props : `recipe: Recipe`, `showActions?: boolean`
+- `data-testid` : `recipe-card-{id}`
 
 #### `RecipeDetailModal.vue`
 
-- Modale de détail complet d'une recette
 - Props : `recipe: Recipe`
-- Emits : `close`
 - Composants enfants : `RecipeIngredientList`, `RecipeStepList`, `MacroBar`, `NutritionLegendItem`
-- `data-testid` : `recipe-detail-modal`, `recipe-detail-close`
-
-#### `RecipeIngredientList.vue`
-
-- Props : `ingredients: Ingredient[]`, `servings: number`
-- Affiche la liste avec ajustement des quantités selon le nombre de portions
-
-#### `RecipeStepList.vue`
-
-- Props : `steps: Step[]`
-- Affiche les étapes numérotées
-
-#### `NutritionLegendItem.vue`
-
-- Props : `label: string`, `value: number`, `unit: string`, `color: string`
-- Un item de la légende nutritionnelle
-
-#### `MacroBar.vue`
-
-- Props : `nutrition: Nutrition`
-- Barre visuelle des macronutriments (protéines / glucides / lipides)
-- Utilise `KuboProgressBar`
 
 #### `FilterModal.vue`
 
-- Modale de filtres du catalogue
 - Props : `modelValue: RecipeFilters`
 - Emits : `update:modelValue`, `close`, `apply`
-- `data-testid` : `filter-modal`, `filter-tags`, `filter-difficulty`, `filter-season`, `filter-apply`, `filter-reset`
 
 ---
 
@@ -793,11 +872,8 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 
 #### `PlanningCard.vue`
 
-- Carte d'un repas dans la vue planning
 - Props : `entry?: PlanningEntry`, `date: string`, `mealType: MealType`
 - Emits : `add`, `remove`
-- Affiche le nom de la recette si une entrée existe, sinon un bouton "+"
-- `data-testid` : `planning-card-{date}-{mealType}`
 
 ---
 
@@ -805,10 +881,8 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 
 #### `GroceryGroup.vue`
 
-- Groupe d'ingrédients par catégorie dans la liste de courses
 - Props : `category: string`, `items: GroceryItem[]`
 - Emits : `toggle-item`
-- `data-testid` : `grocery-group-{category}`, `grocery-item-{name}`
 
 ---
 
@@ -816,11 +890,8 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 
 #### `DashboardSeasonSection.vue`
 
-- Section saisonnière du tableau de bord
 - Stores : `seasonStore`
 - Data : `getSeasonImage()` depuis `src/data/seasonImages.ts`
-- Affiche la saison courante, les fruits & légumes de saison avec leurs icônes SVG / emoji fallback
-- `data-testid` : `season-section`, `season-title`, `season-products`
 
 ---
 
@@ -828,35 +899,63 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 
 #### `KuboButton.vue`
 
-- Props : `variant?: 'primary'|'secondary'|'ghost'|'danger'`, `size?: 'sm'|'md'|'lg'`, `disabled?`, `loading?`, `type?`
-- Emits : `click`
+Props : `variant?: 'primary'|'secondary'|'ghost'|'danger'`, `size?: 'sm'|'md'|'lg'`, `disabled?`, `loading?`
 
 #### `KuboCard.vue`
 
-- Props : `padding?: 'none'|'sm'|'md'|'lg'`, `hoverable?: boolean`
-- Slot par défaut
+Props : `padding?: 'none'|'sm'|'md'|'lg'`, `hoverable?: boolean`
 
 #### `KuboIcon.vue`
 
-- Props : `name: string` (nom d'icône Heroicons), `size?: 'sm'|'md'|'lg'`, `class?`
+Props : `name: string` (Lucide icons), `size?: number`
+
+Icônes disponibles (non exhaustif) : `package`, `shopping-cart`, `list-checks`, `rotate-ccw`, `check`, `plus`, `x`, `x-circle`, `alert-triangle`, `box`, `lock`, `key`, `eye`, `eye-off`, `check-circle`, `alert-circle`, `log-in`, `log-out`, `mail`, `save`, et autres icônes Lucide.
 
 #### `KuboInput.vue`
 
-- Props : `modelValue: string`, `label?: string`, `placeholder?`, `type?`, `error?: string`, `disabled?`
-- Emits : `update:modelValue`, `blur`, `focus`
+Props : `modelValue: string`, `label?`, `placeholder?`, `type?`, `error?`, `disabled?`
 
 #### `KuboProgressBar.vue`
 
-- Props : `value: number` (0–100), `color?: string`, `label?: string`, `showValue?: boolean`
+Props : `value: number` (0–100), `color?`, `label?`, `showValue?`
 
 #### `KuboTag.vue`
 
-- Props : `label: string`, `variant?: 'default'|'season'|'difficulty'`, `removable?: boolean`
-- Emits : `remove`
+Props : `label: string`, `variant?: 'default'|'season'|'difficulty'`, `removable?`
+Emits : `remove`
 
 ---
 
-## 11. Tests E2E (Playwright)
+## 11. Tests unitaires (Vitest)
+
+### Configuration (`vite.config.ts`)
+
+- Runner : Vitest
+- Environment : `jsdom`
+- Include : `src/__tests__/**/*.spec.ts` uniquement
+- Setup : Pinia recréée via `setActivePinia(createPinia())` dans chaque `beforeEach`
+
+### Fichiers de tests
+
+| Fichier                        | Couverture                                                                 |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `tokenService.spec.ts`         | Lecture/écriture/suppression tokens, détection expiration JWT              |
+| `featureAccessService.spec.ts` | Matrice de permissions pour tous les rôles et features                     |
+| `useSeason.spec.ts`            | Calcul saison selon le mois, labels FR, emojis                             |
+| `planningStore.spec.ts`        | Init, toggleRecipe (ajout/retrait), markAsDone, clearPlanning (tous async) |
+| `shoppingStore.spec.ts`        | fetchList, generate, addItem, toggleItem, removeItem, clearList, computeds |
+| `inventoryStore.spec.ts`       | fetchInventory, addItem, updateItem, removeItem, filtres expiration        |
+| `userStore.spec.ts`            | init (getUser + fallback token), updateProfile, updatePortions, viewMode   |
+
+### Conventions de mock
+
+- `vi.mock('@/services/...')` pour tous les services HTTP
+- `vi.hoisted()` pour les fixtures référencées dans les factories `vi.mock`
+- Import dynamique `await import(...)` pour les stores avec dépendances circulaires
+
+---
+
+## 12. Tests E2E (Playwright)
 
 ### Configuration (`playwright.config.js`)
 
@@ -870,15 +969,7 @@ Toutes les vues sont chargées dans `App.vue` via `v-if` sur `uiStore.currentVie
 
 ### Setup projet — `tests/e2e/setup/auth.setup.js`
 
-Exécuté **une seule fois avant tous les tests**. Effectue un vrai login via l'UI, sauvegarde le `storageState` (tokens localStorage) dans `playwright/.auth/user.json` pour éviter les logins répétés (et le rate-limit 429 de l'API).
-
-### Helpers — `tests/e2e/helpers.js`
-
-```javascript
-loginAs(page, role) // 'user' | 'admin' — injecte les tokens depuis le fichier auth
-navigateTo(page, view) // clique sur le nav item correspondant
-waitForView(page, view) // attend le data-testid de la vue
-```
+Exécuté une seule fois avant tous les tests. Effectue un vrai login via l'UI, sauvegarde le `storageState` (tokens localStorage) pour éviter les logins répétés.
 
 ### Fichiers de tests
 
@@ -891,15 +982,15 @@ waitForView(page, view) // attend le data-testid de la vue
 | `catalog.spec.js`   | Affichage recettes, recherche, filtres, pagination, détail recette           |
 | `dashboard.spec.js` | Section saison, produits de saison, suggestions recettes, CTA visiteur       |
 | `planning.spec.js`  | Affichage semaine, navigation prev/next, ajout/suppression repas             |
-| `groceries.spec.js` | Génération liste depuis planning, groupes, cochage items                     |
-| `inventory.spec.js` | Liste items, ajout, modification, suppression, alertes expiration            |
-| `settings.spec.js`  | Affichage préférences, modification (mock)                                   |
-| `profile.spec.js`   | Affichage profil, édition username/email, changement mdp, upload avatar      |
+| `groceries.spec.js` | Génération automatique à l'ouverture, groupes, cochage items                 |
+| `inventory.spec.js` | Liste items, ajout via formulaire, suppression, alertes expiration           |
+| `settings.spec.js`  | Affichage préférences, modification                                          |
+| `profile.spec.js`   | Affichage profil, édition, changement mdp                                    |
 | `season.spec.js`    | Saison calculée correctement, produits affichés, icônes SVG / fallback emoji |
 
 ---
 
-## 12. Variables d'environnement
+## 13. Variables d'environnement
 
 ### `.env` (application)
 

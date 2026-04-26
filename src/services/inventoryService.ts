@@ -1,14 +1,45 @@
-import type { Ingredient } from '@/types/recipe'
-
-// Mocké — pas d'endpoint inventaire disponible pour l'instant
-let MOCK_INVENTORY: Ingredient[] = []
+import httpClient from './httpClient'
+import type {
+  InventoryResponse,
+  InventoryItem,
+  CreateInventoryItem,
+  UpdateInventoryItem,
+  InventoryFilters,
+} from '@/types/inventory'
 
 export const inventoryService = {
-  async getInventory(): Promise<Ingredient[]> {
-    return structuredClone(MOCK_INVENTORY)
+  async getInventory(filters?: InventoryFilters): Promise<InventoryResponse> {
+    try {
+      const { data } = await httpClient.get('/inventory', { params: filters })
+      return data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
   },
 
-  async saveInventory(items: Ingredient[]): Promise<void> {
-    MOCK_INVENTORY = structuredClone(items)
+  async addItem(payload: CreateInventoryItem): Promise<InventoryItem> {
+    try {
+      const { data } = await httpClient.post('/inventory', payload)
+      return data.data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
+  },
+
+  async updateItem(id: string, payload: UpdateInventoryItem): Promise<InventoryItem> {
+    try {
+      const { data } = await httpClient.patch(`/inventory/${id}`, payload)
+      return data.data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
+  },
+
+  async removeItem(id: string): Promise<void> {
+    try {
+      await httpClient.delete(`/inventory/${id}`)
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
   },
 }

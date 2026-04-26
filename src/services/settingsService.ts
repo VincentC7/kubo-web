@@ -1,20 +1,22 @@
-import type { Settings } from '@/types/user'
-
-// Mocké — à remplacer par l'API
-let mockSettings: Settings = {
-  portions: 2,
-  mealsGoal: 5,
-  darkMode: false,
-  viewMode: 'week',
-}
+import httpClient from './httpClient'
+import type { UserSettings } from '@/types/settings'
 
 export const settingsService = {
-  async getSettings(): Promise<Settings> {
-    return { ...mockSettings }
+  async getSettings(): Promise<UserSettings> {
+    try {
+      const { data } = await httpClient.get('/settings')
+      return data.data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
   },
 
-  async saveSettings(payload: Partial<Settings>): Promise<Settings> {
-    Object.assign(mockSettings, payload)
-    return { ...mockSettings }
+  async updateSettings(payload: Partial<UserSettings>): Promise<UserSettings> {
+    try {
+      const { data } = await httpClient.patch('/settings', payload)
+      return data.data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
   },
 }

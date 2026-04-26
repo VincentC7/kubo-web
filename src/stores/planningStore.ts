@@ -1,9 +1,9 @@
-import { ref, reactive, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { planningService } from '@/services/planningService'
 import { useRecipeStore } from './recipeStore'
 import { useUiStore } from './uiStore'
-import type { WeekEntry, WeeklyData } from '@/types/planning'
+import type { PlanningEntry, PlanningMeta } from '@/types/planning'
 
 // ---- Helpers semaine ----
 const MS_PER_DAY = 86400000
@@ -30,23 +30,27 @@ function getWeekRange(date: Date): string {
 
 export const usePlanningStore = defineStore('planning', () => {
   // ---- State ----
-  const weeklyData = reactive<WeeklyData>({})
+  const entries = ref<PlanningEntry[]>([])
+  const meta = ref<PlanningMeta | null>(null)
   const currentDate = ref(new Date())
+  const loading = ref(false)
+  const error = ref<string | null>(null)
 
   // ---- Computed ----
   const weekKey = computed(() => getWeekKey(currentDate.value))
   const weekRange = computed(() => getWeekRange(currentDate.value))
-
   const periodLabel = computed(() => getWeekRange(currentDate.value))
 
+  // Alias : selectedRecipes = toutes les entries de la semaine enrichies avec les données recipeStore
   const selectedRecipes = computed(() => {
     const recipeStore = useRecipeStore()
-    const entries = getWeekEntries()
-    return recipeStore.recipesWithPrice.filter((r) => entries[r.id]?.selected)
+    return recipeStore.recipesWithPrice.filter((r) =>
+      entries.value.some((e) => e.recette.id === r.id),
+    )
   })
 
   const doneRecipes = computed(() =>
-    selectedRecipes.value.filter((r) => getWeekEntries()[r.id]?.done),
+    selectedRecipes.value.filter((r) => entries.value.find((e) => e.recette.id === r.id)?.done),
   )
 
   const nutritionTotals = computed(() => {
@@ -64,65 +68,96 @@ export const usePlanningStore = defineStore('planning', () => {
     return totalPrice.value / selectedRecipes.value.length
   })
 
-  // ---- Helpers internes ----
-  function ensureWeek(key: string): void {
-    if (!weeklyData[key]) weeklyData[key] = {}
+  // ---- Helpers non réactifs ----
+  function isSelected(recetteId: string): boolean {
+    return entries.value.some((e) => e.recette.id === recetteId)
   }
 
-  function getWeekEntries(): Record<string, WeekEntry> {
-    const key = weekKey.value
-    ensureWeek(key)
-    return weeklyData[key]
+  function isDone(recetteIdOrEntryId: string): boolean {
+    return entries.value.some(
+      (e) => (e.recette.id === recetteIdOrEntryId || e.id === recetteIdOrEntryId) && e.done,
+    )
   }
 
-  // ---- Navigation temporelle ----
-  function changePeriod(delta: number): void {
-    const d = new Date(currentDate.value)
-    d.setDate(d.getDate() + delta * 7)
-    currentDate.value = d
-  }
-
-  // ---- Actions planning ----
-  function toggleRecipe(id: string): void {
-    const entries = getWeekEntries()
-    if (!entries[id]) entries[id] = { selected: false, done: false }
-    entries[id].selected = !entries[id].selected
-    if (!entries[id].selected) entries[id].done = false
-  }
-
-  function markAsDone(id: string): void {
-    const uiStore = useUiStore()
-    const entries = getWeekEntries()
-    if (entries[id]) {
-      entries[id].done = !entries[id].done
-      if (entries[id].done) {
-        uiStore.notify('Recette marquée comme cuisinée !')
-      }
+  // ---- Actions ----
+  async function init(): Promise<void> {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await planningService.getPlanning(weekKey.value)
+      entries.value = response.data
+      meta.value = response.meta
+    } catch (e: any) {
+      error.value = e?.error ?? 'Erreur lors du chargement du planning'
+    } finally {
+      loading.value = false
     }
   }
 
-  function isSelected(id: string): boolean {
-    return !!getWeekEntries()[id]?.selected
+  async function changePeriod(delta: number): Promise<void> {
+    const d = new Date(currentDate.value)
+    d.setDate(d.getDate() + delta * 7)
+    currentDate.value = d
+    await init()
   }
 
-  function isDone(id: string): boolean {
-    return !!getWeekEntries()[id]?.done
-  }
-
-  function clearPlanning(): void {
+  async function toggleRecipe(recetteId: string): Promise<void> {
+    const existing = entries.value.find((e) => e.recette.id === recetteId)
     const uiStore = useUiStore()
-    weeklyData[weekKey.value] = {}
-    uiStore.notify('Semaine réinitialisée')
+    try {
+      if (existing) {
+        await planningService.removeEntry(existing.id)
+        entries.value = entries.value.filter((e) => e.id !== existing.id)
+      } else {
+        const { useUserStore } = await import('./userStore')
+        const userStore = useUserStore()
+        const entry = await planningService.addEntry({
+          recetteId,
+          week: weekKey.value,
+          portions: userStore.portions,
+        })
+        entries.value.push(entry)
+      }
+      const { useShoppingStore } = await import('./shoppingStore')
+      useShoppingStore().generate()
+    } catch (e: any) {
+      uiStore.notify(e?.error ?? 'Erreur lors de la mise à jour du planning')
+    }
   }
 
-  async function init(): Promise<void> {
-    const data = await planningService.getPlanning()
-    Object.assign(weeklyData, data)
+  async function markAsDone(id: string): Promise<void> {
+    const uiStore = useUiStore()
+    // id peut être un recetteId ou un entryId
+    const entry = entries.value.find((e) => e.recette.id === id || e.id === id)
+    if (!entry) return
+    try {
+      const updated = await planningService.updateEntry(entry.id, { done: !entry.done })
+      Object.assign(entry, updated)
+      if (updated.done) uiStore.notify('Recette marquée comme cuisinée !')
+    } catch (e: any) {
+      uiStore.notify(e?.error ?? 'Erreur lors de la mise à jour')
+    }
+  }
+
+  async function clearPlanning(): Promise<void> {
+    const uiStore = useUiStore()
+    try {
+      await Promise.all(entries.value.map((e) => planningService.removeEntry(e.id)))
+      entries.value = []
+      uiStore.notify('Semaine réinitialisée')
+      const { useShoppingStore } = await import('./shoppingStore')
+      useShoppingStore().generate()
+    } catch (e: any) {
+      uiStore.notify(e?.error ?? 'Erreur lors de la réinitialisation')
+    }
   }
 
   return {
-    weeklyData,
+    entries,
+    meta,
     currentDate,
+    loading,
+    error,
     weekKey,
     weekRange,
     periodLabel,
@@ -131,12 +166,12 @@ export const usePlanningStore = defineStore('planning', () => {
     nutritionTotals,
     totalPrice,
     avgPrice,
+    isSelected,
+    isDone,
+    init,
     changePeriod,
     toggleRecipe,
     markAsDone,
-    isSelected,
-    isDone,
     clearPlanning,
-    init,
   }
 })

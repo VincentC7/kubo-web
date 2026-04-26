@@ -1,88 +1,110 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { settingsService } from '@/services/settingsService'
 import { userService } from '@/services/userService'
 import { useUiStore } from './uiStore'
 import { useAuthStore } from './authStore'
-import type { User, Settings, UpdateProfilePayload, ChangePasswordPayload } from '@/types/user'
+import type { User, UpdateProfilePayload, ChangePasswordPayload } from '@/types/user'
+import type { UserSettings } from '@/types/settings'
 
 export const useUserStore = defineStore('user', () => {
   // ── State ──────────────────────────────────────────────────────────────────
   const user = ref<User | null>(null)
-  const portions = ref(2)
-  const mealsGoal = ref(5)
-  const viewMode = ref<Settings['viewMode']>('week')
+  const settings = ref<UserSettings | null>(null)
+
+  // ── Getters ────────────────────────────────────────────────────────────────
+  const portions = computed(() => settings.value?.portionsDefault ?? 2)
+  const mealsGoal = computed(() => settings.value?.mealsGoal ?? 5)
+  const viewMode = computed(() => settings.value?.viewMode ?? 'week')
 
   // ── Actions ────────────────────────────────────────────────────────────────
-  function updatePortions(delta: number): void {
-    portions.value = Math.max(1, portions.value + delta)
-  }
-
-  function updateMealsGoal(delta: number): void {
-    mealsGoal.value = Math.max(1, mealsGoal.value + delta)
-  }
-
-  function switchViewMode(mode: Settings['viewMode']): void {
-    viewMode.value = mode
-  }
-
   async function init(): Promise<void> {
     const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) {
+      user.value = null
+      const uiStore = useUiStore()
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) uiStore.setDarkMode(true)
+      return
+    }
 
-    if (authStore.isAuthenticated) {
+    // 1. Récupérer le profil complet depuis l'API
+    try {
+      user.value = await userService.getUser()
+    } catch {
+      // Fallback : décoder depuis le JWT si GET /user échoue
       const base = userService.getUserFromToken()
       if (base) {
-        // firstName/lastName absents du JWT : on les initialise vides,
-        // ils seront renseignés dès le premier PATCH ou si l'API les expose.
         user.value = {
           ...base,
           firstName: user.value?.firstName ?? '',
           lastName: user.value?.lastName ?? '',
         }
       }
-
-      const settings = await settingsService.getSettings()
-      portions.value = settings.portions
-      mealsGoal.value = settings.mealsGoal
-      viewMode.value = settings.viewMode
-
-      const uiStore = useUiStore()
-      if (settings.darkMode) uiStore.setDarkMode(true)
-      else if (window.matchMedia('(prefers-color-scheme: dark)').matches) uiStore.setDarkMode(true)
-    } else {
-      user.value = null
-      const uiStore = useUiStore()
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) uiStore.setDarkMode(true)
     }
+
+    // 2. Charger les settings
+    try {
+      settings.value = await settingsService.getSettings()
+    } catch {
+      // Garder les valeurs par défaut si l'API échoue
+    }
+
+    const uiStore = useUiStore()
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) uiStore.setDarkMode(true)
   }
 
-  /** Appelée après un PATCH /user réussi — met à jour firstName/lastName localement */
   function setProfile(data: Pick<User, 'firstName' | 'lastName' | 'email'>): void {
     if (!user.value) return
     user.value = { ...user.value, ...data }
   }
 
-  /** Wrapper updateProfile — appelle l'API puis met à jour le store */
   async function updateProfile(payload: UpdateProfilePayload): Promise<void> {
     const updated = await userService.updateProfile(payload)
     setProfile(updated)
   }
 
-  /** Wrapper changePassword — délègue à userService */
   async function changePassword(payload: ChangePasswordPayload): Promise<void> {
     await userService.changePassword(payload)
   }
 
+  async function updatePortions(delta: number): Promise<void> {
+    const newVal = Math.max(1, portions.value + delta)
+    try {
+      settings.value = await settingsService.updateSettings({ portionsDefault: newVal })
+    } catch {
+      // Optimistic update si l'API échoue
+      if (settings.value) settings.value = { ...settings.value, portionsDefault: newVal }
+    }
+  }
+
+  async function updateMealsGoal(delta: number): Promise<void> {
+    const newVal = Math.max(1, mealsGoal.value + delta)
+    try {
+      settings.value = await settingsService.updateSettings({ mealsGoal: newVal })
+    } catch {
+      if (settings.value) settings.value = { ...settings.value, mealsGoal: newVal }
+    }
+  }
+
+  async function switchViewMode(mode: UserSettings['viewMode']): Promise<void> {
+    try {
+      settings.value = await settingsService.updateSettings({ viewMode: mode })
+    } catch {
+      if (settings.value) settings.value = { ...settings.value, viewMode: mode }
+    }
+  }
+
   return {
     user,
+    settings,
     portions,
     mealsGoal,
     viewMode,
-    updatePortions,
-    updateMealsGoal,
-    switchViewMode,
     init,
     updateProfile,
     changePassword,
+    updatePortions,
+    updateMealsGoal,
+    switchViewMode,
   }
 })

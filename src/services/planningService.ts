@@ -1,14 +1,46 @@
-import type { WeeklyData } from '@/types/planning'
-
-// Mocké — pas d'endpoint planning disponible pour l'instant
-let MOCK_PLANNING: WeeklyData = {}
+import httpClient from './httpClient'
+import type {
+  PlanningResponse,
+  PlanningEntry,
+  CreatePlanningEntry,
+  UpdatePlanningEntry,
+} from '@/types/planning'
 
 export const planningService = {
-  async getPlanning(): Promise<WeeklyData> {
-    return structuredClone(MOCK_PLANNING)
+  async getPlanning(week?: string): Promise<PlanningResponse> {
+    try {
+      const { data } = await httpClient.get('/planning', {
+        params: week ? { week } : {},
+      })
+      return data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
   },
 
-  async savePlanning(data: WeeklyData): Promise<void> {
-    MOCK_PLANNING = structuredClone(data)
+  async addEntry(payload: CreatePlanningEntry): Promise<PlanningEntry> {
+    try {
+      const { data } = await httpClient.post('/planning', payload)
+      return data.data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
+  },
+
+  async updateEntry(id: string, payload: UpdatePlanningEntry): Promise<PlanningEntry> {
+    try {
+      const { data } = await httpClient.patch(`/planning/${id}`, payload)
+      return data.data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
+  },
+
+  async removeEntry(id: string): Promise<void> {
+    try {
+      await httpClient.delete(`/planning/${id}`)
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
   },
 }

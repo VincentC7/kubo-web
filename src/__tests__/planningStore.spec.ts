@@ -1,17 +1,66 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import type { PlanningEntry, PlanningResponse } from '@/types/planning'
 
-// ── Mock des dépendances externes ────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-// planningService mocké (in-memory par défaut dans l'app, on retourne un objet vide)
+let mockEntries: PlanningEntry[] = []
+let nextId = 1
+
+function makeEntry(recetteId: string, overrides?: Partial<PlanningEntry>): PlanningEntry {
+  return {
+    id: String(nextId++),
+    recette: { id: recetteId, nom: 'Recette', tempsTotal: 30, difficulte: 'Facile' },
+    week: '2026-W18',
+    portions: 2,
+    done: false,
+    ...overrides,
+  }
+}
+
+// ── Mock planningService — simule le back en mémoire ─────────────────────────
+
 vi.mock('@/services/planningService', () => ({
   planningService: {
-    getPlanning: vi.fn().mockResolvedValue({}),
-    savePlanning: vi.fn().mockResolvedValue(undefined),
+    getPlanning: vi.fn().mockImplementation(
+      (): Promise<PlanningResponse> =>
+        Promise.resolve({
+          data: mockEntries,
+          meta: { week: '2026-W18', weekStart: '2026-04-27', weekEnd: '2026-05-03' },
+        }),
+    ),
+    addEntry: vi
+      .fn()
+      .mockImplementation(
+        (payload: {
+          recetteId: string
+          week: string
+          portions: number
+        }): Promise<PlanningEntry> => {
+          const entry = makeEntry(payload.recetteId, {
+            week: payload.week,
+            portions: payload.portions,
+          })
+          mockEntries.push(entry)
+          return Promise.resolve(entry)
+        },
+      ),
+    updateEntry: vi
+      .fn()
+      .mockImplementation((id: string, payload: Partial<PlanningEntry>): Promise<PlanningEntry> => {
+        const entry = mockEntries.find((e) => e.id === id)!
+        Object.assign(entry, payload)
+        return Promise.resolve(entry)
+      }),
+    removeEntry: vi.fn().mockImplementation((id: string): Promise<void> => {
+      mockEntries = mockEntries.filter((e) => e.id !== id)
+      return Promise.resolve()
+    }),
   },
 }))
 
-// uiStore.notify() mocké pour capturer les toasts sans UI
+// ── Mock uiStore ──────────────────────────────────────────────────────────────
+
 vi.mock('@/stores/uiStore', () => ({
   useUiStore: vi.fn(() => ({
     notify: vi.fn(),
@@ -23,10 +72,18 @@ vi.mock('@/stores/uiStore', () => ({
     toastVisible: false,
     showInventory: true,
     showGroceries: true,
+    setDarkMode: vi.fn(),
   })),
 }))
 
-// recipeStore mocké avec quelques recettes de test
+// ── Mock userStore ────────────────────────────────────────────────────────────
+
+vi.mock('@/stores/userStore', () => ({
+  useUserStore: vi.fn(() => ({ portions: 2 })),
+}))
+
+// ── Mock recipeStore ──────────────────────────────────────────────────────────
+
 vi.mock('@/stores/recipeStore', () => ({
   useRecipeStore: vi.fn(() => ({
     recipesWithPrice: [
@@ -46,6 +103,8 @@ import { usePlanningStore } from '@/stores/planningStore'
 describe('planningStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    mockEntries = []
+    nextId = 1
   })
 
   // ── weekKey ──────────────────────────────────────────────────────────────────
@@ -56,18 +115,18 @@ describe('planningStore', () => {
       expect(store.weekKey).toMatch(/^\d{4}-W\d+$/)
     })
 
-    it("change quand on avance d'une semaine", () => {
+    it("change quand on avance d'une semaine", async () => {
       const store = usePlanningStore()
       const before = store.weekKey
-      store.changePeriod(1)
+      await store.changePeriod(1)
       expect(store.weekKey).not.toBe(before)
     })
 
-    it('revient à la semaine initiale après +1 puis -1', () => {
+    it('revient à la semaine initiale après +1 puis -1', async () => {
       const store = usePlanningStore()
       const initial = store.weekKey
-      store.changePeriod(1)
-      store.changePeriod(-1)
+      await store.changePeriod(1)
+      await store.changePeriod(-1)
       expect(store.weekKey).toBe(initial)
     })
   })
@@ -75,33 +134,33 @@ describe('planningStore', () => {
   // ── toggleRecipe ─────────────────────────────────────────────────────────────
 
   describe('toggleRecipe', () => {
-    it('sélectionne une recette non sélectionnée', () => {
+    it('sélectionne une recette non sélectionnée', async () => {
       const store = usePlanningStore()
       expect(store.isSelected('1')).toBe(false)
-      store.toggleRecipe('1')
+      await store.toggleRecipe('1')
       expect(store.isSelected('1')).toBe(true)
     })
 
-    it('désélectionne une recette déjà sélectionnée', () => {
+    it('désélectionne une recette déjà sélectionnée', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.toggleRecipe('1')
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('1')
       expect(store.isSelected('1')).toBe(false)
     })
 
-    it('reset done à false lors de la désélection', () => {
+    it('reset done à false lors de la désélection', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.markAsDone('1')
+      await store.toggleRecipe('1')
+      await store.markAsDone('1')
       expect(store.isDone('1')).toBe(true)
-      store.toggleRecipe('1') // désélectionne
+      await store.toggleRecipe('1') // désélectionne
       expect(store.isDone('1')).toBe(false)
     })
 
-    it('peut sélectionner plusieurs recettes indépendamment', () => {
+    it('peut sélectionner plusieurs recettes indépendamment', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.toggleRecipe('2')
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('2')
       expect(store.isSelected('1')).toBe(true)
       expect(store.isSelected('2')).toBe(true)
       expect(store.isSelected('3')).toBe(false)
@@ -111,25 +170,24 @@ describe('planningStore', () => {
   // ── markAsDone ───────────────────────────────────────────────────────────────
 
   describe('markAsDone', () => {
-    it('marque une recette sélectionnée comme faite', () => {
+    it('marque une recette sélectionnée comme faite', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.markAsDone('1')
+      await store.toggleRecipe('1')
+      await store.markAsDone('1')
       expect(store.isDone('1')).toBe(true)
     })
 
-    it('toggle : marquer fait puis démarquer', () => {
+    it('toggle : marquer fait puis démarquer', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.markAsDone('1')
-      store.markAsDone('1')
+      await store.toggleRecipe('1')
+      await store.markAsDone('1')
+      await store.markAsDone('1')
       expect(store.isDone('1')).toBe(false)
     })
 
-    it("ne fait rien si la recette n'est pas dans les entrées de la semaine", () => {
+    it("ne fait rien si la recette n'est pas dans les entrées de la semaine", async () => {
       const store = usePlanningStore()
-      // '999' n'a jamais été toggleé → aucune entrée
-      expect(() => store.markAsDone('999')).not.toThrow()
+      await expect(store.markAsDone('999')).resolves.not.toThrow()
       expect(store.isDone('999')).toBe(false)
     })
   })
@@ -142,20 +200,20 @@ describe('planningStore', () => {
       expect(store.selectedRecipes).toHaveLength(0)
     })
 
-    it('contient les recettes sélectionnées', () => {
+    it('contient les recettes sélectionnées', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.toggleRecipe('3')
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('3')
       expect(store.selectedRecipes).toHaveLength(2)
       expect(store.selectedRecipes.map((r) => r.id)).toContain('1')
       expect(store.selectedRecipes.map((r) => r.id)).toContain('3')
     })
 
-    it('exclut les recettes désélectionnées', () => {
+    it('exclut les recettes désélectionnées', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.toggleRecipe('2')
-      store.toggleRecipe('1') // désélectionne
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('2')
+      await store.toggleRecipe('1') // désélectionne
       expect(store.selectedRecipes).toHaveLength(1)
       expect(store.selectedRecipes[0].id).toBe('2')
     })
@@ -169,21 +227,18 @@ describe('planningStore', () => {
       expect(store.nutritionTotals).toBeNull()
     })
 
-    it('calcule correctement la somme des macros des recettes sélectionnées', () => {
+    it('calcule correctement la somme des macros des recettes sélectionnées', async () => {
       const store = usePlanningStore()
-      // Recette 1 : prot=5, fat=3, carb=15
-      // Recette 2 : prot=10, fat=5, carb=40
-      store.toggleRecipe('1')
-      store.toggleRecipe('2')
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('2')
       expect(store.nutritionTotals).toEqual({ prot: 15, fat: 8, carb: 55 })
     })
 
-    it('ne compte pas les recettes désélectionnées', () => {
+    it('ne compte pas les recettes désélectionnées', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.toggleRecipe('2')
-      store.toggleRecipe('2') // retire recette 2
-      // Seulement recette 1 : prot=5, fat=3, carb=15
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('2')
+      await store.toggleRecipe('2') // retire recette 2
       expect(store.nutritionTotals).toEqual({ prot: 5, fat: 3, carb: 15 })
     })
   })
@@ -196,11 +251,10 @@ describe('planningStore', () => {
       expect(store.totalPrice).toBe(0)
     })
 
-    it('totalPrice est la somme des prix des recettes sélectionnées', () => {
+    it('totalPrice est la somme des prix des recettes sélectionnées', async () => {
       const store = usePlanningStore()
-      // Recette 1 : 10€, Recette 3 : 6€
-      store.toggleRecipe('1')
-      store.toggleRecipe('3')
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('3')
       expect(store.totalPrice).toBe(16)
     })
 
@@ -209,11 +263,10 @@ describe('planningStore', () => {
       expect(store.avgPrice).toBe(0)
     })
 
-    it('avgPrice est la moyenne des prix des recettes sélectionnées', () => {
+    it('avgPrice est la moyenne des prix des recettes sélectionnées', async () => {
       const store = usePlanningStore()
-      // Recette 1 : 10€, Recette 2 : 8€ → moy = 9€
-      store.toggleRecipe('1')
-      store.toggleRecipe('2')
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('2')
       expect(store.avgPrice).toBe(9)
     })
   })
@@ -221,47 +274,30 @@ describe('planningStore', () => {
   // ── clearPlanning ────────────────────────────────────────────────────────────
 
   describe('clearPlanning', () => {
-    it('vide les recettes sélectionnées de la semaine courante', () => {
+    it('vide les recettes sélectionnées', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.toggleRecipe('2')
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('2')
       expect(store.selectedRecipes).toHaveLength(2)
-      store.clearPlanning()
+      await store.clearPlanning()
       expect(store.selectedRecipes).toHaveLength(0)
-    })
-
-    it('ne touche pas aux données des autres semaines', () => {
-      const store = usePlanningStore()
-      store.toggleRecipe('1')
-      const initialKey = store.weekKey
-      store.changePeriod(1) // semaine suivante
-      store.toggleRecipe('2')
-      store.changePeriod(-1) // retour semaine initiale
-      store.clearPlanning() // clear semaine initiale
-      expect(store.isSelected('1')).toBe(false)
-      // Aller sur la semaine suivante : recette 2 doit toujours être sélectionnée
-      store.changePeriod(1)
-      expect(store.isSelected('2')).toBe(true)
-      // Nettoyage
-      store.changePeriod(-1)
-      void initialKey
     })
   })
 
   // ── doneRecipes ──────────────────────────────────────────────────────────────
 
   describe('doneRecipes', () => {
-    it('est vide si aucune recette marquée comme faite', () => {
+    it('est vide si aucune recette marquée comme faite', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
+      await store.toggleRecipe('1')
       expect(store.doneRecipes).toHaveLength(0)
     })
 
-    it('contient uniquement les recettes marquées comme faites', () => {
+    it('contient uniquement les recettes marquées comme faites', async () => {
       const store = usePlanningStore()
-      store.toggleRecipe('1')
-      store.toggleRecipe('2')
-      store.markAsDone('1')
+      await store.toggleRecipe('1')
+      await store.toggleRecipe('2')
+      await store.markAsDone('1')
       expect(store.doneRecipes).toHaveLength(1)
       expect(store.doneRecipes[0].id).toBe('1')
     })

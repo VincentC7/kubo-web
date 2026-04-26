@@ -2,12 +2,11 @@
  * userService — données de profil + mutations via API.
  *
  * getUserFromToken() : décode l'access token pour obtenir email + rôle.
- * firstName/lastName ne sont PAS dans le JWT Symfony par défaut —
- * ils sont stockés séparément dans le userStore après un appel PATCH ou
- * récupérés depuis la réponse du profil si l'API les expose.
+ * firstName/lastName ne sont PAS dans le JWT Symfony par défaut.
  *
- * updateProfile() : PATCH /user — modifie firstName et/ou lastName.
- * changePassword() : POST /user/password — change le mot de passe.
+ * getUser()          : GET /user — récupère le profil complet (firstName, lastName, id).
+ * updateProfile()    : PATCH /user — modifie firstName et/ou lastName.
+ * changePassword()   : POST /user/password — change le mot de passe.
  */
 import httpClient from './httpClient'
 import { tokenService } from './tokenService'
@@ -26,23 +25,42 @@ export const userService = {
     const payload = tokenService.decodePayload(token)
     if (!payload) return null
 
-    const role = mapRole(payload.roles ?? [])
+    const roles = payload.roles ?? []
+    const role = mapRole(roles)
     const email = payload.username ?? payload.email ?? ''
 
-    return { id: '', email, role }
+    return { id: '', email, role, roles }
+  },
+
+  async getUser(): Promise<User> {
+    try {
+      const { data } = await httpClient.get('/user')
+      return data.data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
   },
 
   async updateProfile(
     payload: UpdateProfilePayload,
   ): Promise<Pick<User, 'firstName' | 'lastName' | 'email'>> {
-    const response = await httpClient.patch<{ firstName: string; lastName: string; email: string }>(
-      '/user',
-      payload,
-    )
-    return response.data
+    try {
+      const response = await httpClient.patch<{
+        firstName: string
+        lastName: string
+        email: string
+      }>('/user', payload)
+      return response.data
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
   },
 
   async changePassword(payload: ChangePasswordPayload): Promise<void> {
-    await httpClient.post('/user/password', payload)
+    try {
+      await httpClient.post('/user/password', payload)
+    } catch (error: any) {
+      throw error.response?.data ?? { error: 'Erreur réseau' }
+    }
   },
 }
