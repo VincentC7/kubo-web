@@ -259,12 +259,13 @@ async function logout(): Promise<void> {
           <div class="profile-field">
             <label class="profile-field__label" for="current-pwd">Mot de passe actuel</label>
             <div class="profile-field__wrap">
+              <KuboIcon name="lock" :size="15" class="profile-field__icon" />
               <input
                 id="current-pwd"
                 v-model="currentPassword"
                 :type="showCurrentPwd ? 'text' : 'password'"
                 :class="[
-                  'profile-field__input profile-field__input--padded-right',
+                  'profile-field__input profile-field__input--padded-left profile-field__input--padded-right',
                   { 'profile-field__input--error': pwdFieldErrors.currentPassword },
                 ]"
                 placeholder="••••••••"
@@ -287,12 +288,13 @@ async function logout(): Promise<void> {
           <div class="profile-field">
             <label class="profile-field__label" for="new-pwd">Nouveau mot de passe</label>
             <div class="profile-field__wrap">
+              <KuboIcon name="lock" :size="15" class="profile-field__icon" />
               <input
                 id="new-pwd"
                 v-model="newPassword"
                 :type="showNewPwd ? 'text' : 'password'"
                 :class="[
-                  'profile-field__input profile-field__input--padded-right',
+                  'profile-field__input profile-field__input--padded-left profile-field__input--padded-right',
                   { 'profile-field__input--error': pwdFieldErrors.newPassword },
                 ]"
                 placeholder="••••••••"
@@ -325,12 +327,13 @@ async function logout(): Promise<void> {
           <div class="profile-field">
             <label class="profile-field__label" for="confirm-pwd">Confirmer le mot de passe</label>
             <div class="profile-field__wrap">
+              <KuboIcon name="lock" :size="15" class="profile-field__icon" />
               <input
                 id="confirm-pwd"
                 v-model="confirmPassword"
                 :type="showConfirmPwd ? 'text' : 'password'"
                 :class="[
-                  'profile-field__input profile-field__input--padded-right',
+                  'profile-field__input profile-field__input--padded-left profile-field__input--padded-right',
                   { 'profile-field__input--error': pwdFieldErrors.confirmPassword },
                 ]"
                 placeholder="••••••••"
@@ -541,6 +544,16 @@ async function logout(): Promise<void> {
   color: var(--kubo-text);
   outline: none;
   transition: border-color var(--transition-base);
+}
+.profile-field__icon {
+  position: absolute;
+  left: 13px;
+  color: var(--kubo-text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.profile-field__input--padded-left {
+  padding-left: 38px;
 }
 .profile-field__input--padded-right {
   padding-right: 40px;
