@@ -28,6 +28,40 @@ watch(showGroceries, (v) => {
   localShowGroceries.value = v
 })
 
+// Valeurs locales pour debounce (affichage immédiat, PATCH retardé)
+const localPortions = ref(portions.value)
+const localMealsGoal = ref(mealsGoal.value)
+
+watch(portions, (v) => {
+  localPortions.value = v
+})
+watch(mealsGoal, (v) => {
+  localMealsGoal.value = v
+})
+
+let portionsTimer: ReturnType<typeof setTimeout> | null = null
+let mealsTimer: ReturnType<typeof setTimeout> | null = null
+
+function changePortions(delta: number): void {
+  localPortions.value = Math.max(1, localPortions.value + delta)
+  if (portionsTimer) clearTimeout(portionsTimer)
+  portionsTimer = setTimeout(async () => {
+    const diff = localPortions.value - portions.value
+    if (diff !== 0) await updatePortions(diff)
+    portionsTimer = null
+  }, 300)
+}
+
+function changeMealsGoal(delta: number): void {
+  localMealsGoal.value = Math.max(1, localMealsGoal.value + delta)
+  if (mealsTimer) clearTimeout(mealsTimer)
+  mealsTimer = setTimeout(async () => {
+    const diff = localMealsGoal.value - mealsGoal.value
+    if (diff !== 0) await updateMealsGoal(diff)
+    mealsTimer = null
+  }, 300)
+}
+
 function save(): void {
   uiStore.setShowInventory(localShowInventory.value)
   uiStore.setShowGroceries(localShowGroceries.value)
@@ -99,13 +133,13 @@ function save(): void {
           <div class="settings__stepper">
             <span class="settings__stepper-label">Nombre de portions</span>
             <div class="settings__stepper-ctrl">
-              <button class="settings__stepper-btn" @click="updatePortions(-1)">
+              <button class="settings__stepper-btn" @click="changePortions(-1)">
                 <KuboIcon name="minus" :size="14" />
               </button>
               <span class="settings__stepper-value" data-testid="portions-value">{{
-                portions
+                localPortions
               }}</span>
-              <button class="settings__stepper-btn" @click="updatePortions(1)">
+              <button class="settings__stepper-btn" @click="changePortions(1)">
                 <KuboIcon name="plus" :size="14" />
               </button>
             </div>
@@ -114,13 +148,13 @@ function save(): void {
           <div class="settings__stepper">
             <span class="settings__stepper-label">Repas / semaine</span>
             <div class="settings__stepper-ctrl">
-              <button class="settings__stepper-btn" @click="updateMealsGoal(-1)">
+              <button class="settings__stepper-btn" @click="changeMealsGoal(-1)">
                 <KuboIcon name="minus" :size="14" />
               </button>
               <span class="settings__stepper-value" data-testid="meals-goal-value">{{
-                mealsGoal
+                localMealsGoal
               }}</span>
-              <button class="settings__stepper-btn" @click="updateMealsGoal(1)">
+              <button class="settings__stepper-btn" @click="changeMealsGoal(1)">
                 <KuboIcon name="plus" :size="14" />
               </button>
             </div>

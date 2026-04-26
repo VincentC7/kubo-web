@@ -6,52 +6,52 @@
 /* ---- Palette ---- */
 :root {
   /* Brand */
-  --kubo-green:         #00A35E;
-  --kubo-green-dark:    #008a4f;
-  --kubo-green-light:   #e6f7f0;
-  --kubo-green-shadow:  rgba(0, 163, 94, 0.2);
+  --kubo-green: #00a35e;
+  --kubo-green-dark: #008a4f;
+  --kubo-green-light: #e6f7f0;
+  --kubo-green-shadow: rgba(0, 163, 94, 0.2);
 
   /* Surfaces — Light */
-  --kubo-bg:            #F9F9F7;
-  --kubo-surface:       #ffffff;
-  --kubo-surface-soft:  #f8fafc;
-  --kubo-surface-mute:  #f1f5f9;
-  --kubo-surface-inv:   #0f172a;
+  --kubo-bg: #f9f9f7;
+  --kubo-surface: #ffffff;
+  --kubo-surface-soft: #f8fafc;
+  --kubo-surface-mute: #f1f5f9;
+  --kubo-surface-inv: #0f172a;
 
   /* Borders — Light */
-  --kubo-border:        #f1f5f9;
-  --kubo-border-mid:    rgba(226, 232, 240, 0.6);
+  --kubo-border: #f1f5f9;
+  --kubo-border-mid: rgba(226, 232, 240, 0.6);
 
   /* Text — Light */
-  --kubo-text:          #0f172a;
-  --kubo-text-muted:    #94a3b8;
-  --kubo-text-faint:    #cbd5e1;
+  --kubo-text: #0f172a;
+  --kubo-text-muted: #94a3b8;
+  --kubo-text-faint: #cbd5e1;
 
   /* Macro colours */
-  --kubo-prot:          #3B82F6;
-  --kubo-fat:           #F97316;
-  --kubo-carb:          #10B981;
+  --kubo-prot: #3b82f6;
+  --kubo-fat: #f97316;
+  --kubo-carb: #10b981;
 
   /* Tag colours */
-  --kubo-tag-green:     #059669;
-  --kubo-tag-red:       #DC2626;
-  --kubo-tag-blue:      #2563EB;
-  --kubo-tag-orange:    #EA580C;
-  --kubo-tag-purple:    #7C3AED;
-  --kubo-tag-default:   #64748B;
+  --kubo-tag-green: #059669;
+  --kubo-tag-red: #dc2626;
+  --kubo-tag-blue: #2563eb;
+  --kubo-tag-orange: #ea580c;
+  --kubo-tag-purple: #7c3aed;
+  --kubo-tag-default: #64748b;
 
   /* Radius */
-  --radius-xs:  8px;
-  --radius-sm:  12px;
-  --radius-md:  16px;
-  --radius-lg:  24px;
-  --radius-xl:  32px;
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
   --radius-2xl: 40px;
   --radius-3xl: 48px;
 
   /* Shadow */
   --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg:   0 10px 30px -5px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.12);
 
   /* Transitions */
   --transition-base: 0.3s ease;
@@ -63,24 +63,30 @@
 
 /* ---- Dark mode ---- */
 .dark {
-  --kubo-bg:           #020617;
-  --kubo-surface:      #0f172a;
+  --kubo-bg: #020617;
+  --kubo-surface: #0f172a;
   --kubo-surface-soft: #1e293b;
   --kubo-surface-mute: #1e293b;
-  --kubo-surface-inv:  #ffffff;
+  --kubo-surface-inv: #ffffff;
 
-  --kubo-border:       #1e293b;
-  --kubo-border-mid:   rgba(30, 41, 59, 0.8);
+  --kubo-border: #1e293b;
+  --kubo-border-mid: rgba(30, 41, 59, 0.8);
 
-  --kubo-text:         #f1f5f9;
-  --kubo-text-muted:   #64748b;
-  --kubo-text-faint:   #334155;
+  --kubo-text: #f1f5f9;
+  --kubo-text-muted: #64748b;
+  --kubo-text-faint: #334155;
 
-  --kubo-green-light:  rgba(0, 163, 94, 0.15);
+  --kubo-green-light: rgba(0, 163, 94, 0.15);
 }
 
 /* ---- Reset ---- */
-*, *::before, *::after { box-sizing: border-box; margin: 0; font-weight: normal; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  font-weight: normal;
+}
 
 body {
   font-family: var(--font-base);
@@ -92,18 +98,53 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color var(--transition-base), color var(--transition-base);
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base);
   overflow: hidden;
 }
 
 /* ---- Scrollbar ---- */
-.custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--kubo-border); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--kubo-border);
+  border-radius: 10px;
+}
 
 /* ---- Animations ---- */
 @keyframes kuboFadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.fade-in { animation: kuboFadeIn 0.4s ease-out; }
+.fade-in {
+  animation: kuboFadeIn 0.4s ease-out;
+}
+
+/* ---- Focus visible global ---- */
+:focus-visible {
+  outline: 2px solid var(--kubo-green);
+  outline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

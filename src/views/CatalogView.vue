@@ -51,6 +51,9 @@ const detailRecipe = computed<RecipeWithPrice | null>(
 const sentinel = ref<HTMLDivElement | null>(null)
 let observer: IntersectionObserver | null = null
 
+// Chargement initial : aucune recette chargée encore
+const initialLoading = computed(() => catalogLoading.value && recipeStore.recipes.length === 0)
+
 // Formate "2026-W12" → "Semaine 12"
 const weekLabel = computed(() => {
   if (!currentWeek.value) return ''
@@ -141,8 +144,28 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
+    <!-- Skeleton chargement initial -->
+    <div v-if="initialLoading" class="catalog__section">
+      <div class="catalog__section-header">
+        <div class="skeleton skeleton--title" />
+      </div>
+      <div class="catalog__grid">
+        <div v-for="n in 6" :key="n" class="skeleton-card">
+          <div class="skeleton skeleton--image" />
+          <div class="skeleton-card__body">
+            <div class="skeleton skeleton--line skeleton--line-lg" />
+            <div class="skeleton skeleton--line skeleton--line-sm" />
+            <div class="skeleton skeleton--line skeleton--line-md" />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Section 1 : Sélection de la semaine (masquée si filtre actif) -->
-    <section v-if="weeklySelection.length && !hasActiveFilters" class="catalog__section">
+    <section
+      v-if="weeklySelection.length && !hasActiveFilters && !initialLoading"
+      class="catalog__section"
+    >
       <div class="catalog__section-header">
         <h2 class="catalog__section-title">Sélection de la semaine</h2>
         <span v-if="weekLabel" class="catalog__week-badge">{{ weekLabel }}</span>
@@ -160,7 +183,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- Section 2 : Toutes les recettes -->
-    <section class="catalog__section">
+    <section v-if="!initialLoading" class="catalog__section">
       <div class="catalog__section-header">
         <h2 class="catalog__section-title">
           {{ hasActiveFilters ? 'Résultats de recherche' : 'Toutes les recettes' }}
@@ -334,5 +357,66 @@ onBeforeUnmount(() => {
   border-top-color: var(--kubo-green);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+}
+
+/* Skeleton loading */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--kubo-surface-mute) 25%,
+    var(--kubo-border) 50%,
+    var(--kubo-surface-mute) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius-sm, 6px);
+}
+
+.skeleton--title {
+  height: 20px;
+  width: 180px;
+}
+
+.skeleton--image {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.skeleton--line {
+  height: 14px;
+  border-radius: var(--radius-xs);
+}
+.skeleton--line-lg {
+  width: 80%;
+}
+.skeleton--line-md {
+  width: 55%;
+}
+.skeleton--line-sm {
+  width: 40%;
+}
+
+.skeleton-card {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--kubo-surface);
+  border: 1px solid var(--kubo-border);
+}
+
+.skeleton-card__body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 </style>

@@ -2,7 +2,7 @@
 /**
  * DashboardView — Vue tableau de bord nutritionnel + budget
  */
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   Chart,
   DoughnutController,
@@ -39,12 +39,6 @@ const uiStore = useUiStore()
 const { navTo } = uiStore
 
 const seasonStore = useSeasonStore()
-
-onMounted(() => {
-  renderChart()
-  renderBudgetChart()
-  seasonStore.init()
-})
 
 const hasData = computed(() => selectedRecipes.value.length > 0)
 
@@ -88,34 +82,52 @@ Chart.register(
   Legend,
 )
 
+let renderChartPending = false
+
 async function renderChart() {
+  if (renderChartPending) return
+  renderChartPending = true
+  await nextTick()
+  renderChartPending = false
+
   if (!chartCanvas.value) return
+
+  const rawData = [
+    nutritionTotals.value?.prot ?? 0,
+    nutritionTotals.value?.fat ?? 0,
+    nutritionTotals.value?.carb ?? 0,
+  ]
+  const hasValues = rawData.some((v) => v > 0)
+  const data = hasValues ? rawData : [1]
+  const colors = hasValues ? ['#3B82F6', '#F97316', '#10B981'] : ['#e2e8f0']
+
+  // Destroy toujours pour éviter les incohérences labels/options entre états
   if (chartInstance) {
     chartInstance.destroy()
     chartInstance = null
   }
+
   chartInstance = new Chart(chartCanvas.value, {
     type: 'doughnut',
     data: {
-      labels: ['Protéines', 'Lipides', 'Glucides'],
+      labels: hasValues ? ['Protéines', 'Lipides', 'Glucides'] : ['—'],
       datasets: [
         {
-          data: [
-            nutritionTotals.value?.prot ?? 0,
-            nutritionTotals.value?.fat ?? 0,
-            nutritionTotals.value?.carb ?? 0,
-          ],
-          backgroundColor: ['#3B82F6', '#F97316', '#10B981'],
+          data,
+          backgroundColor: colors,
           borderWidth: 0,
-          borderRadius: 10,
-          spacing: 5,
+          borderRadius: hasValues ? 10 : 0,
+          spacing: hasValues ? 5 : 0,
         },
       ],
     },
     options: {
       cutout: '80%',
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: hasValues },
+      },
     },
   })
 }
@@ -195,9 +207,19 @@ watch(viewMode, () => {
 })
 
 onMounted(() => {
+  // Réinitialiser les instances au montage (le composant peut être remonté après navigation)
+  chartInstance = null
+  budgetChartInstance = null
   renderChart()
   renderBudgetChart()
   seasonStore.init()
+})
+
+onUnmounted(() => {
+  chartInstance?.destroy()
+  chartInstance = null
+  budgetChartInstance?.destroy()
+  budgetChartInstance = null
 })
 </script>
 
@@ -251,7 +273,7 @@ onMounted(() => {
           </h2>
           <div class="dashboard__chart-body">
             <div class="dashboard__chart-wrap">
-              <canvas ref="chartCanvas" />
+              <canvas ref="chartCanvas" width="220" height="220" />
             </div>
             <div class="dashboard__legend">
               <NutritionLegendItem

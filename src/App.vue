@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppBottomNav from '@/components/layout/AppBottomNav.vue'
@@ -27,6 +27,26 @@ const authStore = useAuthStore()
 const { isAuthenticated } = storeToRefs(authStore)
 
 const loading = ref(true)
+
+// Ordre des vues pour la transition slide
+const VIEW_ORDER = [
+  'dashboard',
+  'catalog',
+  'planning',
+  'groceries',
+  'inventory',
+  'settings',
+  'profile',
+]
+const slideDirection = ref<'forward' | 'backward'>('forward')
+let prevViewIndex = 0
+
+watch(currentView, (next, prev) => {
+  const nextIdx = VIEW_ORDER.indexOf(next)
+  const prevIdx = VIEW_ORDER.indexOf(prev)
+  slideDirection.value = nextIdx >= prevIdx ? 'forward' : 'backward'
+  prevViewIndex = nextIdx
+})
 
 // La modale auth est ouverte si on est sur login ou register
 const isAuthModal = computed(
@@ -84,7 +104,10 @@ onMounted(async () => {
         <AppHeader />
 
         <main class="app-shell__content custom-scrollbar">
-          <Transition name="view" mode="out-in">
+          <Transition
+            :name="slideDirection === 'forward' ? 'view-forward' : 'view-backward'"
+            mode="out-in"
+          >
             <DashboardView v-if="shellView === 'dashboard'" key="dashboard" />
             <CatalogView v-else-if="shellView === 'catalog'" key="catalog" />
             <PlanningView v-else-if="shellView === 'planning'" key="planning" />
@@ -186,20 +209,46 @@ onMounted(async () => {
   }
 }
 
-/* View transitions */
-.view-enter-active,
-.view-leave-active {
+/* View transitions — desktop : fade vertical, mobile : slide horizontal */
+.view-forward-enter-active,
+.view-forward-leave-active,
+.view-backward-enter-active,
+.view-backward-leave-active {
   transition:
     opacity 0.25s ease,
     transform 0.25s ease;
 }
-.view-enter-from {
+
+/* Desktop : fade + translateY */
+.view-forward-enter-from,
+.view-backward-enter-from {
   opacity: 0;
   transform: translateY(8px);
 }
-.view-leave-to {
+.view-forward-leave-to,
+.view-backward-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+/* Mobile : slide horizontal */
+@media (max-width: 767px) {
+  .view-forward-enter-from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  .view-forward-leave-to {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  .view-backward-enter-from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  .view-backward-leave-to {
+    opacity: 0;
+    transform: translateX(32px);
+  }
 }
 
 /* Modal transition */

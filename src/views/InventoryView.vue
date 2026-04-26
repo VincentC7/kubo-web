@@ -2,19 +2,24 @@
 /**
  * InventoryView — Vue inventaire des ingrédients en stock
  */
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
 import { useInventoryStore } from '@/stores/inventoryStore'
+import { useUiStore } from '@/stores/uiStore'
 import type { CreateInventoryItem } from '@/types/inventory'
 
 const inventoryStore = useInventoryStore()
 const { items, loading, expiringSoon, expired, itemsByCategory } = storeToRefs(inventoryStore)
+const uiStore = useUiStore()
 
 onMounted(() => inventoryStore.fetchInventory())
 
 // ── Formulaire d'ajout ────────────────────────────────────────────────────────
 const showForm = ref(false)
+const submitting = ref(false)
+const nameError = ref('')
+
 const form = ref<CreateInventoryItem>({
   name: '',
   quantity: 1,
@@ -23,22 +28,36 @@ const form = ref<CreateInventoryItem>({
   expiresAt: '',
 })
 
+const isFormValid = computed(() => form.value.name.trim().length > 0)
+
 function resetForm() {
   form.value = { name: '', quantity: 1, unit: '', category: '', expiresAt: '' }
+  nameError.value = ''
   showForm.value = false
 }
 
+function validateName() {
+  nameError.value = form.value.name.trim() ? '' : 'Le nom est obligatoire'
+}
+
 async function submitAdd() {
-  if (!form.value.name.trim()) return
-  const payload: CreateInventoryItem = {
-    name: form.value.name.trim(),
-    quantity: form.value.quantity,
-    ...(form.value.unit ? { unit: form.value.unit } : {}),
-    ...(form.value.category ? { category: form.value.category } : {}),
-    ...(form.value.expiresAt ? { expiresAt: form.value.expiresAt } : {}),
+  validateName()
+  if (!isFormValid.value) return
+  submitting.value = true
+  try {
+    const payload: CreateInventoryItem = {
+      name: form.value.name.trim(),
+      quantity: form.value.quantity,
+      ...(form.value.unit ? { unit: form.value.unit } : {}),
+      ...(form.value.category ? { category: form.value.category } : {}),
+      ...(form.value.expiresAt ? { expiresAt: form.value.expiresAt } : {}),
+    }
+    await inventoryStore.addItem(payload)
+    uiStore.notify(`"${payload.name}" ajouté à l'inventaire`)
+    resetForm()
+  } finally {
+    submitting.value = false
   }
-  await inventoryStore.addItem(payload)
-  resetForm()
 }
 
 function statusLabel(status: string | null) {
@@ -78,41 +97,96 @@ function statusLabel(status: string | null) {
           </div>
         </div>
         <button class="inventory__add-btn" @click="showForm = !showForm">
-          <KuboIcon name="plus" :size="15" />
-          Ajouter
+          <KuboIcon :name="showForm ? 'x' : 'plus'" :size="15" />
+          {{ showForm ? 'Annuler' : 'Ajouter' }}
         </button>
       </div>
     </header>
 
     <!-- Formulaire d'ajout -->
-    <div v-if="showForm" class="inventory__form-card">
-      <h2 class="inventory__form-title">Ajouter un ingrédient</h2>
-      <div class="inventory__form-row">
-        <input v-model="form.name" class="inventory__input" placeholder="Nom *" />
-        <input
-          v-model.number="form.quantity"
-          type="number"
-          min="0"
-          class="inventory__input inventory__input--sm"
-          placeholder="Qté"
-        />
-        <input
-          v-model="form.unit"
-          class="inventory__input inventory__input--sm"
-          placeholder="Unité"
-        />
-        <input v-model="form.category" class="inventory__input" placeholder="Catégorie" />
-        <input v-model="form.expiresAt" type="date" class="inventory__input" />
-      </div>
-      <div class="inventory__form-actions">
-        <button class="inventory__form-cancel" @click="resetForm">Annuler</button>
-        <button class="inventory__form-submit" :disabled="!form.name.trim()" @click="submitAdd">
-          Ajouter
-        </button>
-      </div>
-    </div>
+    <Transition name="form-slide">
+      <div v-if="showForm" class="inventory__form-card">
+        <h2 class="inventory__form-title">Ajouter un ingrédient</h2>
+        <div class="inventory__form-grid">
+          <!-- Nom -->
+          <div class="inventory__field inventory__field--wide">
+            <label class="inventory__label" for="inv-name">
+              Nom <span class="inventory__label-required">*</span>
+            </label>
+            <input
+              id="inv-name"
+              v-model="form.name"
+              :class="['inventory__input', { 'inventory__input--error': nameError }]"
+              placeholder="ex. Carottes"
+              autocomplete="off"
+              @blur="validateName"
+            />
+            <p v-if="nameError" class="inventory__field-error">
+              <KuboIcon name="alert-circle" :size="12" />
+              {{ nameError }}
+            </p>
+          </div>
 
-    <!-- Loading -->
+          <!-- Quantité -->
+          <div class="inventory__field">
+            <label class="inventory__label" for="inv-qty">Quantité</label>
+            <input
+              id="inv-qty"
+              v-model.number="form.quantity"
+              type="number"
+              min="0"
+              class="inventory__input"
+              placeholder="1"
+            />
+          </div>
+
+          <!-- Unité -->
+          <div class="inventory__field">
+            <label class="inventory__label" for="inv-unit">Unité</label>
+            <input
+              id="inv-unit"
+              v-model="form.unit"
+              class="inventory__input"
+              placeholder="kg, L, pcs…"
+            />
+          </div>
+
+          <!-- Catégorie -->
+          <div class="inventory__field inventory__field--wide">
+            <label class="inventory__label" for="inv-cat">Catégorie</label>
+            <input
+              id="inv-cat"
+              v-model="form.category"
+              class="inventory__input"
+              placeholder="ex. Légumes"
+            />
+          </div>
+
+          <!-- Date d'expiration -->
+          <div class="inventory__field inventory__field--wide">
+            <label class="inventory__label" for="inv-expires">Date d'expiration</label>
+            <input id="inv-expires" v-model="form.expiresAt" type="date" class="inventory__input" />
+          </div>
+        </div>
+
+        <div class="inventory__form-actions">
+          <button class="inventory__form-cancel" :disabled="submitting" @click="resetForm">
+            Annuler
+          </button>
+          <button
+            class="inventory__form-submit"
+            :disabled="!isFormValid || submitting"
+            @click="submitAdd"
+          >
+            <span v-if="submitting" class="inventory__btn-spinner" />
+            <KuboIcon v-else name="plus" :size="14" />
+            {{ submitting ? 'Ajout…' : 'Ajouter' }}
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Loading initial -->
     <div v-if="loading" class="inventory__loading">
       <span class="inventory__spinner" />
     </div>
@@ -169,8 +243,17 @@ function statusLabel(status: string | null) {
 
     <!-- État vide -->
     <div v-else-if="!loading" class="inventory__empty">
-      <KuboIcon name="box" :size="48" />
-      <p>Votre inventaire est vide.</p>
+      <div class="inventory__empty-icon">
+        <KuboIcon name="box" :size="32" />
+      </div>
+      <p class="inventory__empty-title">Votre inventaire est vide</p>
+      <p class="inventory__empty-hint">
+        Ajoutez vos ingrédients en stock pour suivre les dates d'expiration et éviter le gaspillage.
+      </p>
+      <button class="inventory__empty-cta" @click="showForm = true">
+        <KuboIcon name="plus" :size="15" />
+        Ajouter un ingrédient
+      </button>
     </div>
   </div>
 </template>
@@ -271,67 +354,158 @@ function statusLabel(status: string | null) {
 }
 
 /* Formulaire */
+.form-slide-enter-active,
+.form-slide-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+.form-slide-enter-from,
+.form-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin-bottom: 0;
+}
+.form-slide-enter-to,
+.form-slide-leave-from {
+  opacity: 1;
+  max-height: 600px;
+  margin-bottom: 32px;
+}
+
 .inventory__form-card {
   background: var(--kubo-surface);
-  border: 1px solid var(--kubo-border);
+  border: 1px solid var(--kubo-green);
   border-radius: var(--radius-xl);
-  padding: 24px;
+  padding: 28px;
   margin-bottom: 32px;
+  box-shadow: 0 0 0 4px var(--kubo-green-shadow);
 }
 .inventory__form-title {
   font-size: 16px;
   font-weight: 800;
   color: var(--kubo-text);
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
-.inventory__form-row {
+
+.inventory__form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 600px) {
+  .inventory__form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inventory__field {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 6px;
 }
+.inventory__field--wide {
+  grid-column: 1 / -1;
+}
+
+.inventory__label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--kubo-text-muted);
+}
+.inventory__label-required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
 .inventory__input {
-  flex: 1;
-  min-width: 140px;
-  padding: 8px 12px;
-  background: var(--kubo-bg);
-  border: 1px solid var(--kubo-border);
+  padding: 10px 14px;
+  background: var(--kubo-surface-mute);
+  border: 1.5px solid var(--kubo-border);
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: 14px;
+  font-family: var(--font-base);
   color: var(--kubo-text);
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
 }
-.inventory__input--sm {
-  max-width: 100px;
-  flex: 0 0 100px;
+.inventory__input:focus {
+  outline: none;
+  border-color: var(--kubo-green);
+  box-shadow: 0 0 0 3px var(--kubo-green-shadow);
 }
+.inventory__input--error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+.inventory__field-error {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ef4444;
+}
+
 .inventory__form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
 }
 .inventory__form-cancel {
-  padding: 8px 16px;
+  padding: 10px 20px;
   background: transparent;
-  border: 1px solid var(--kubo-border);
+  border: 1.5px solid var(--kubo-border);
   border-radius: var(--radius-lg);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: var(--font-base);
   color: var(--kubo-text-muted);
   cursor: pointer;
+  transition: border-color var(--transition-base);
 }
+.inventory__form-cancel:hover {
+  border-color: var(--kubo-text-muted);
+}
+.inventory__form-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .inventory__form-submit {
-  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
   background: var(--kubo-green);
   color: #fff;
   border: none;
   border-radius: var(--radius-lg);
   font-size: 13px;
   font-weight: 700;
+  font-family: var(--font-base);
   cursor: pointer;
+  transition: opacity var(--transition-base);
 }
 .inventory__form-submit:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
+}
+.inventory__form-submit:not(:disabled):hover {
+  opacity: 0.88;
+}
+
+.inventory__btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
 }
 
 /* Section */
@@ -448,8 +622,8 @@ function statusLabel(status: string | null) {
 }
 
 .inventory__item-remove {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: none;
   background: transparent;
   color: var(--kubo-text-muted);
@@ -460,7 +634,7 @@ function statusLabel(status: string | null) {
   justify-content: center;
   transition: all var(--transition-base);
   flex-shrink: 0;
-  opacity: 0.4;
+  opacity: 0.35;
 }
 .inventory__item-remove:hover {
   background: #fef2f2;
@@ -491,18 +665,57 @@ function statusLabel(status: string | null) {
   }
 }
 
-/* Empty */
+/* Empty state */
 .inventory__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 80px 0;
+  gap: 16px;
+  padding: 80px 24px;
   text-align: center;
+}
+.inventory__empty-icon {
+  width: 80px;
+  height: 80px;
+  background: var(--kubo-surface-mute);
+  border-radius: var(--radius-2xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--kubo-text-muted);
 }
-.inventory__empty p {
-  font-size: 16px;
+.inventory__empty-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--kubo-text);
+}
+.inventory__empty-hint {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--kubo-text-muted);
+  max-width: 380px;
+  line-height: 1.6;
+}
+.inventory__empty-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: var(--kubo-green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-xl);
+  font-size: 14px;
   font-weight: 700;
+  font-family: var(--font-base);
+  cursor: pointer;
+  margin-top: 8px;
+  transition:
+    opacity var(--transition-base),
+    transform var(--transition-bounce);
+}
+.inventory__empty-cta:hover {
+  opacity: 0.88;
+  transform: scale(1.02);
 }
 </style>

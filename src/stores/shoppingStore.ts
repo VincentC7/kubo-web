@@ -69,11 +69,46 @@ export const useShoppingStore = defineStore('shopping', () => {
   async function toggleItem(id: string): Promise<void> {
     const item = list.value?.items.find((i) => i.id === id)
     if (!item) return
+    const nowChecked = !item.checked
     try {
-      const updated = await shoppingService.updateItem(id, { checked: !item.checked })
+      const updated = await shoppingService.updateItem(id, { checked: nowChecked })
       if (list.value) {
         const idx = list.value.items.findIndex((i) => i.id === id)
         if (idx !== -1) list.value.items[idx] = { ...list.value.items[idx], ...updated }
+      }
+
+      // Sync inventaire : coché → ajout, décoché → retrait
+      const { useInventoryStore } = await import('./inventoryStore')
+      const inventoryStore = useInventoryStore()
+
+      if (nowChecked) {
+        // Chercher si l'ingrédient existe déjà dans l'inventaire (par nom, insensible à la casse)
+        const existing = inventoryStore.items.find(
+          (i) => i.name.toLowerCase() === item.ingredientName.toLowerCase(),
+        )
+        if (existing) {
+          // Incrémenter la quantité existante
+          const addQty = item.quantity ?? 1
+          await inventoryStore.updateItem(existing.id, {
+            quantity: (existing.quantity ?? 0) + addQty,
+          })
+        } else {
+          // Créer une nouvelle entrée
+          await inventoryStore.addItem({
+            name: item.ingredientName,
+            quantity: item.quantity ?? 1,
+            unit: item.unit ?? undefined,
+            category: item.category ?? undefined,
+          })
+        }
+      } else {
+        // Décoché → retirer de l'inventaire (cherche par nom)
+        const existing = inventoryStore.items.find(
+          (i) => i.name.toLowerCase() === item.ingredientName.toLowerCase(),
+        )
+        if (existing) {
+          await inventoryStore.removeItem(existing.id)
+        }
       }
     } catch (e: any) {
       const uiStore = useUiStore()
@@ -91,6 +126,13 @@ export const useShoppingStore = defineStore('shopping', () => {
       const uiStore = useUiStore()
       uiStore.notify(e?.error ?? 'Erreur lors de la suppression')
     }
+  }
+
+  async function checkAll(): Promise<void> {
+    if (!list.value) return
+    const unchecked = list.value.items.filter((i) => !i.checked)
+    if (unchecked.length === 0) return
+    await Promise.all(unchecked.map((i) => toggleItem(i.id)))
   }
 
   async function clearList(): Promise<void> {
@@ -122,6 +164,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     toggleItem,
     removeItem,
     clearList,
+    checkAll,
     init,
   }
 })

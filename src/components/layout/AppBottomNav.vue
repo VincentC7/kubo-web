@@ -49,7 +49,9 @@ function isVisible(item: NavItem): boolean {
         :aria-label="item.label"
         @click="navTo(item.id)"
       >
-        <KuboIcon :name="item.icon" :size="22" />
+        <span class="bottom-nav__icon-wrap">
+          <KuboIcon :name="item.icon" :size="22" />
+        </span>
         <span class="bottom-nav__label">{{ item.label }}</span>
       </button>
     </template>
@@ -69,6 +71,7 @@ function isVisible(item: NavItem): boolean {
   border-top: 1px solid var(--kubo-border);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+  height: 68px;
 }
 
 @media (min-width: 768px) {
@@ -84,7 +87,7 @@ function isVisible(item: NavItem): boolean {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 10px 4px;
+  padding: 8px 4px;
   border: none;
   background: transparent;
   color: var(--kubo-text-muted);
@@ -92,6 +95,7 @@ function isVisible(item: NavItem): boolean {
   font-family: var(--font-base);
   transition: color var(--transition-base);
   min-width: 0;
+  min-height: 44px;
 }
 
 .bottom-nav__item:hover {
@@ -100,6 +104,21 @@ function isVisible(item: NavItem): boolean {
 
 .bottom-nav__item--active {
   color: var(--kubo-green);
+}
+
+.bottom-nav__icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 28px;
+  border-radius: 14px;
+  transition: background var(--transition-base);
+}
+
+.bottom-nav__item--active .bottom-nav__icon-wrap {
+  background: var(--kubo-green-light);
 }
 
 .bottom-nav__label {

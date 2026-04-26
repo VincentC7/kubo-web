@@ -87,6 +87,14 @@ export const usePlanningStore = defineStore('planning', () => {
       const response = await planningService.getPlanning(weekKey.value)
       entries.value = response.data
       meta.value = response.meta
+
+      // Hydrater les données nutritionnelles pour chaque recette du planning
+      // (la liste catalogue ne contient que prot/fat/carb = 0)
+      if (entries.value.length > 0) {
+        const { useRecipeStore } = await import('./recipeStore')
+        const recipeStore = useRecipeStore()
+        await Promise.all(entries.value.map((e) => recipeStore.fetchDetail(e.recette.id)))
+      }
     } catch (e: any) {
       error.value = e?.error ?? 'Erreur lors du chargement du planning'
     } finally {
@@ -117,6 +125,9 @@ export const usePlanningStore = defineStore('planning', () => {
           portions: userStore.portions,
         })
         entries.value.push(entry)
+        // Hydrater les données nutritionnelles de la recette ajoutée
+        const { useRecipeStore } = await import('./recipeStore')
+        useRecipeStore().fetchDetail(recetteId)
       }
       const { useShoppingStore } = await import('./shoppingStore')
       useShoppingStore().generate()

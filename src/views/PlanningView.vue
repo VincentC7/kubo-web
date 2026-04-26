@@ -60,9 +60,17 @@ function handleModalToggle(): void {
 
     <!-- Empty state -->
     <div v-else class="planning__empty">
-      <KuboIcon name="calendar" :size="48" />
-      <p>Votre menu est vide pour cette semaine.</p>
-      <p class="planning__empty-hint">Ajoutez des recettes depuis le catalogue.</p>
+      <div class="planning__empty-icon">
+        <KuboIcon name="calendar" :size="32" />
+      </div>
+      <h2 class="planning__empty-title">Menu vide cette semaine</h2>
+      <p class="planning__empty-hint">
+        Parcourez le catalogue et ajoutez des recettes pour composer votre menu.
+      </p>
+      <button class="planning__empty-cta" @click="uiStore.navTo('catalog')">
+        <KuboIcon name="search" :size="18" />
+        Parcourir le catalogue
+      </button>
     </div>
 
     <RecipeDetailModal
@@ -119,18 +127,56 @@ function handleModalToggle(): void {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 80px 0;
+  gap: 16px;
+  padding: 80px 24px;
   text-align: center;
-  color: var(--kubo-text-muted);
 }
-.planning__empty p {
-  font-size: 16px;
-  font-weight: 700;
+.planning__empty-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-2xl);
+  background: var(--kubo-surface-mute);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--kubo-text-muted);
+  margin-bottom: 4px;
+}
+.planning__empty-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--kubo-text);
+  letter-spacing: -0.02em;
 }
 .planning__empty-hint {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  opacity: 0.7;
+  color: var(--kubo-text-muted);
+  max-width: 300px;
+  line-height: 1.5;
+}
+.planning__empty-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 14px 28px;
+  background: var(--kubo-green);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
+}
+.planning__empty-cta:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px var(--kubo-green-shadow);
+}
+.planning__empty-cta:active {
+  transform: scale(0.98);
 }
 </style>
