@@ -14,26 +14,19 @@ const { user } = storeToRefs(userStore)
 
 const roleLabel = computed(() => {
   switch (authStore.currentRole) {
-    case 'admin':
-      return 'Administrateur'
-    case 'user':
-      return 'Utilisateur'
-    default:
-      return 'Visiteur'
+    case 'admin': return 'Administrateur'
+    case 'user': return 'Membre'
+    default: return 'Visiteur'
   }
 })
 
-// ── Avatar ────────────────────────────────────────────────────────────────────
 const initials = computed(() => {
   if (user.value?.firstName && user.value?.lastName) {
     return (user.value.firstName[0] + user.value.lastName[0]).toUpperCase()
   }
   const email = user.value?.email ?? ''
   const parts = email.split('@')[0].split(/[._-]/)
-  return parts
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('')
+  return parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('')
 })
 
 const avatarStyle = computed(() => {
@@ -67,14 +60,8 @@ async function saveProfile(): Promise<void> {
   profileSuccess.value = false
 
   let valid = true
-  if (!editFirstName.value.trim()) {
-    profileFieldErrors.value.firstName = 'Le prénom est requis'
-    valid = false
-  }
-  if (!editLastName.value.trim()) {
-    profileFieldErrors.value.lastName = 'Le nom est requis'
-    valid = false
-  }
+  if (!editFirstName.value.trim()) { profileFieldErrors.value.firstName = 'Le prénom est requis'; valid = false }
+  if (!editLastName.value.trim()) { profileFieldErrors.value.lastName = 'Le nom est requis'; valid = false }
   if (!valid) return
 
   profileSaving.value = true
@@ -84,9 +71,7 @@ async function saveProfile(): Promise<void> {
       lastName: editLastName.value.trim(),
     })
     profileSuccess.value = true
-    setTimeout(() => {
-      profileSuccess.value = false
-    }, 3000)
+    setTimeout(() => { profileSuccess.value = false }, 3000)
   } catch (e) {
     profileError.value = e instanceof Error ? e.message : 'Erreur lors de la sauvegarde'
   } finally {
@@ -104,11 +89,7 @@ const showConfirmPwd = ref(false)
 const pwdSaving = ref(false)
 const pwdSuccess = ref(false)
 const pwdError = ref<string | null>(null)
-const pwdFieldErrors = ref<{
-  currentPassword?: string
-  newPassword?: string
-  confirmPassword?: string
-}>({})
+const pwdFieldErrors = ref<{ currentPassword?: string; newPassword?: string; confirmPassword?: string }>({})
 
 const { passwordRules, isPasswordValid: isNewPasswordValid } = usePasswordRules(newPassword)
 
@@ -118,33 +99,19 @@ async function savePassword(): Promise<void> {
   pwdSuccess.value = false
 
   let valid = true
-  if (!currentPassword.value) {
-    pwdFieldErrors.value.currentPassword = 'Le mot de passe actuel est requis'
-    valid = false
-  }
-  if (!isNewPasswordValid.value) {
-    pwdFieldErrors.value.newPassword = 'Le nouveau mot de passe ne respecte pas les critères'
-    valid = false
-  }
-  if (confirmPassword.value !== newPassword.value) {
-    pwdFieldErrors.value.confirmPassword = 'Les mots de passe ne correspondent pas'
-    valid = false
-  }
+  if (!currentPassword.value) { pwdFieldErrors.value.currentPassword = 'Le mot de passe actuel est requis'; valid = false }
+  if (!isNewPasswordValid.value) { pwdFieldErrors.value.newPassword = 'Le nouveau mot de passe ne respecte pas les critères'; valid = false }
+  if (confirmPassword.value !== newPassword.value) { pwdFieldErrors.value.confirmPassword = 'Les mots de passe ne correspondent pas'; valid = false }
   if (!valid) return
 
   pwdSaving.value = true
   try {
-    await userStore.changePassword({
-      currentPassword: currentPassword.value,
-      newPassword: newPassword.value,
-    })
+    await userStore.changePassword({ currentPassword: currentPassword.value, newPassword: newPassword.value })
     pwdSuccess.value = true
     currentPassword.value = ''
     newPassword.value = ''
     confirmPassword.value = ''
-    setTimeout(() => {
-      pwdSuccess.value = false
-    }, 3000)
+    setTimeout(() => { pwdSuccess.value = false }, 3000)
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erreur'
     if (msg.toLowerCase().includes('incorrect') || msg.includes('currentPassword')) {
@@ -163,376 +130,371 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <div class="profile-view">
-    <div class="profile-header">
-      <h1 class="profile-header__title">Mon profil</h1>
+  <div class="profile fade-in" data-testid="profile-view">
+
+    <!-- Header -->
+    <div class="profile__header">
+      <div>
+        <h1 class="kb-h1">Mon <span class="roman">profil.</span></h1>
+        <p class="profile__sub">Gérez vos informations personnelles et votre sécurité.</p>
+      </div>
     </div>
 
-    <!-- Identity card -->
-    <div class="profile-card">
-      <div class="profile-identity">
-        <div class="profile-avatar" :style="avatarStyle">{{ initials || '?' }}</div>
-        <div class="profile-identity__info">
-          <p class="profile-identity__name">{{ displayName }}</p>
-          <p class="profile-identity__email">{{ user?.email }}</p>
-          <span :class="['profile-role-badge', `profile-role-badge--${authStore.currentRole}`]">
+    <!-- Identity bento card (sage) -->
+    <div class="profile__identity-card">
+      <div class="profile__identity-left">
+        <div class="profile__avatar" :style="avatarStyle">
+          <span>{{ initials || '?' }}</span>
+        </div>
+        <div class="profile__identity-info">
+          <p class="profile__identity-name">{{ displayName }}</p>
+          <p class="profile__identity-email">{{ user?.email }}</p>
+          <span :class="['profile__role-badge', `profile__role-badge--${authStore.currentRole}`]">
             {{ roleLabel }}
           </span>
         </div>
       </div>
+      <!-- MOCK stats -->
+      <div class="profile__stats">
+        <div class="profile__stat">
+          <span class="profile__stat-val">—</span>
+          <span class="profile__stat-label">Recettes</span>
+        </div>
+        <div class="profile__stat">
+          <span class="profile__stat-val">—</span>
+          <span class="profile__stat-label">Semaines</span>
+        </div>
+        <div class="profile__stat">
+          <span class="profile__stat-val">—</span>
+          <span class="profile__stat-label">Budget</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Edit profile + Change password côte à côte -->
-    <div class="profile-cards-row">
+    <!-- Two-col grid: edit + password -->
+    <div class="profile__grid">
+
       <!-- Edit profile -->
-      <div class="profile-card">
-        <h2 class="profile-section-title">
-          <KuboIcon name="user" :size="16" />
-          Informations personnelles
+      <div class="profile__card">
+        <h2 class="profile__card-title">
+          <KuboIcon name="user" :size="15" />
+          Informations
         </h2>
 
-        <form class="profile-form" @submit.prevent="saveProfile">
-          <div class="profile-field-row">
-            <div class="profile-field">
-              <label class="profile-field__label" for="edit-firstname">Prénom</label>
+        <form class="profile__form" @submit.prevent="saveProfile">
+          <div class="profile__field-row">
+            <div class="profile__field">
+              <label class="profile__label" for="edit-firstname">Prénom</label>
               <input
                 id="edit-firstname"
                 v-model="editFirstName"
                 type="text"
-                :class="[
-                  'profile-field__input',
-                  { 'profile-field__input--error': profileFieldErrors.firstName },
-                ]"
+                :class="['profile__input', { 'profile__input--error': profileFieldErrors.firstName }]"
                 placeholder="Jean"
                 :disabled="profileSaving"
               />
-              <p v-if="profileFieldErrors.firstName" class="profile-field__error">
-                {{ profileFieldErrors.firstName }}
-              </p>
+              <p v-if="profileFieldErrors.firstName" class="profile__field-error">{{ profileFieldErrors.firstName }}</p>
             </div>
-            <div class="profile-field">
-              <label class="profile-field__label" for="edit-lastname">Nom</label>
+            <div class="profile__field">
+              <label class="profile__label" for="edit-lastname">Nom</label>
               <input
                 id="edit-lastname"
                 v-model="editLastName"
                 type="text"
-                :class="[
-                  'profile-field__input',
-                  { 'profile-field__input--error': profileFieldErrors.lastName },
-                ]"
+                :class="['profile__input', { 'profile__input--error': profileFieldErrors.lastName }]"
                 placeholder="Dupont"
                 :disabled="profileSaving"
               />
-              <p v-if="profileFieldErrors.lastName" class="profile-field__error">
-                {{ profileFieldErrors.lastName }}
-              </p>
+              <p v-if="profileFieldErrors.lastName" class="profile__field-error">{{ profileFieldErrors.lastName }}</p>
             </div>
           </div>
 
-          <div v-if="profileSuccess" class="profile-feedback profile-feedback--success">
-            <KuboIcon name="check-circle" :size="14" />
-            Profil mis à jour avec succès.
+          <div v-if="profileSuccess" class="profile__feedback profile__feedback--ok">
+            <KuboIcon name="check-circle" :size="14" />Profil mis à jour.
           </div>
-          <div v-if="profileError" class="profile-feedback profile-feedback--error">
-            <KuboIcon name="alert-circle" :size="14" />
-            {{ profileError }}
+          <div v-if="profileError" class="profile__feedback profile__feedback--err">
+            <KuboIcon name="alert-circle" :size="14" />{{ profileError }}
           </div>
 
-          <button type="submit" class="profile-save-btn" :disabled="profileSaving">
-            <span v-if="profileSaving" class="profile-save-btn__spinner" />
-            <template v-else>
-              <KuboIcon name="save" :size="15" />
-              Enregistrer
-            </template>
+          <button type="submit" class="btn-sage profile__submit" :disabled="profileSaving">
+            <span v-if="profileSaving" class="btn-spinner" />
+            <template v-else><KuboIcon name="save" :size="14" />Enregistrer</template>
           </button>
         </form>
       </div>
 
       <!-- Change password -->
-      <div class="profile-card">
-        <h2 class="profile-section-title">
-          <KuboIcon name="lock" :size="16" />
-          Changer de mot de passe
+      <div class="profile__card">
+        <h2 class="profile__card-title">
+          <KuboIcon name="lock" :size="15" />
+          Sécurité
         </h2>
 
-        <form class="profile-form" @submit.prevent="savePassword">
-          <div class="profile-field">
-            <label class="profile-field__label" for="current-pwd">Mot de passe actuel</label>
-            <div class="profile-field__wrap">
-              <KuboIcon name="lock" :size="15" class="profile-field__icon" />
+        <form class="profile__form" @submit.prevent="savePassword">
+          <div class="profile__field">
+            <label class="profile__label" for="current-pwd">Mot de passe actuel</label>
+            <div class="profile__input-wrap">
+              <KuboIcon name="lock" :size="14" class="profile__input-icon" />
               <input
                 id="current-pwd"
                 v-model="currentPassword"
                 :type="showCurrentPwd ? 'text' : 'password'"
-                :class="[
-                  'profile-field__input profile-field__input--padded-left profile-field__input--padded-right',
-                  { 'profile-field__input--error': pwdFieldErrors.currentPassword },
-                ]"
+                :class="['profile__input profile__input--left profile__input--right', { 'profile__input--error': pwdFieldErrors.currentPassword }]"
                 placeholder="••••••••"
                 autocomplete="current-password"
                 :disabled="pwdSaving"
               />
-              <button
-                type="button"
-                class="profile-field__eye"
-                @click="showCurrentPwd = !showCurrentPwd"
-              >
-                <KuboIcon :name="showCurrentPwd ? 'eye-off' : 'eye'" :size="15" />
+              <button type="button" class="profile__eye" @click="showCurrentPwd = !showCurrentPwd">
+                <KuboIcon :name="showCurrentPwd ? 'eye-off' : 'eye'" :size="14" />
               </button>
             </div>
-            <p v-if="pwdFieldErrors.currentPassword" class="profile-field__error">
-              {{ pwdFieldErrors.currentPassword }}
-            </p>
+            <p v-if="pwdFieldErrors.currentPassword" class="profile__field-error">{{ pwdFieldErrors.currentPassword }}</p>
           </div>
 
-          <div class="profile-field">
-            <label class="profile-field__label" for="new-pwd">Nouveau mot de passe</label>
-            <div class="profile-field__wrap">
-              <KuboIcon name="lock" :size="15" class="profile-field__icon" />
+          <div class="profile__field">
+            <label class="profile__label" for="new-pwd">Nouveau mot de passe</label>
+            <div class="profile__input-wrap">
+              <KuboIcon name="lock" :size="14" class="profile__input-icon" />
               <input
                 id="new-pwd"
                 v-model="newPassword"
                 :type="showNewPwd ? 'text' : 'password'"
-                :class="[
-                  'profile-field__input profile-field__input--padded-left profile-field__input--padded-right',
-                  { 'profile-field__input--error': pwdFieldErrors.newPassword },
-                ]"
+                :class="['profile__input profile__input--left profile__input--right', { 'profile__input--error': pwdFieldErrors.newPassword }]"
                 placeholder="••••••••"
                 autocomplete="new-password"
                 :disabled="pwdSaving"
               />
-              <button type="button" class="profile-field__eye" @click="showNewPwd = !showNewPwd">
-                <KuboIcon :name="showNewPwd ? 'eye-off' : 'eye'" :size="15" />
+              <button type="button" class="profile__eye" @click="showNewPwd = !showNewPwd">
+                <KuboIcon :name="showNewPwd ? 'eye-off' : 'eye'" :size="14" />
               </button>
             </div>
             <div v-if="newPassword.length > 0" class="pwd-rules">
               <span :class="['pwd-rule', { 'pwd-rule--ok': passwordRules.length }]">
-                <KuboIcon :name="passwordRules.length ? 'check' : 'x'" :size="11" />
-                8 car. min
+                <KuboIcon :name="passwordRules.length ? 'check' : 'x'" :size="10" />8 car.
               </span>
               <span :class="['pwd-rule', { 'pwd-rule--ok': passwordRules.uppercase }]">
-                <KuboIcon :name="passwordRules.uppercase ? 'check' : 'x'" :size="11" />
-                1 majuscule
+                <KuboIcon :name="passwordRules.uppercase ? 'check' : 'x'" :size="10" />Maj.
               </span>
               <span :class="['pwd-rule', { 'pwd-rule--ok': passwordRules.digit }]">
-                <KuboIcon :name="passwordRules.digit ? 'check' : 'x'" :size="11" />
-                1 chiffre
+                <KuboIcon :name="passwordRules.digit ? 'check' : 'x'" :size="10" />Chiffre
               </span>
             </div>
-            <p v-if="pwdFieldErrors.newPassword" class="profile-field__error">
-              {{ pwdFieldErrors.newPassword }}
-            </p>
+            <p v-if="pwdFieldErrors.newPassword" class="profile__field-error">{{ pwdFieldErrors.newPassword }}</p>
           </div>
 
-          <div class="profile-field">
-            <label class="profile-field__label" for="confirm-pwd">Confirmer le mot de passe</label>
-            <div class="profile-field__wrap">
-              <KuboIcon name="lock" :size="15" class="profile-field__icon" />
+          <div class="profile__field">
+            <label class="profile__label" for="confirm-pwd">Confirmer</label>
+            <div class="profile__input-wrap">
+              <KuboIcon name="lock" :size="14" class="profile__input-icon" />
               <input
                 id="confirm-pwd"
                 v-model="confirmPassword"
                 :type="showConfirmPwd ? 'text' : 'password'"
-                :class="[
-                  'profile-field__input profile-field__input--padded-left profile-field__input--padded-right',
-                  { 'profile-field__input--error': pwdFieldErrors.confirmPassword },
-                ]"
+                :class="['profile__input profile__input--left profile__input--right', { 'profile__input--error': pwdFieldErrors.confirmPassword }]"
                 placeholder="••••••••"
                 autocomplete="new-password"
                 :disabled="pwdSaving"
               />
-              <button
-                type="button"
-                class="profile-field__eye"
-                @click="showConfirmPwd = !showConfirmPwd"
-              >
-                <KuboIcon :name="showConfirmPwd ? 'eye-off' : 'eye'" :size="15" />
+              <button type="button" class="profile__eye" @click="showConfirmPwd = !showConfirmPwd">
+                <KuboIcon :name="showConfirmPwd ? 'eye-off' : 'eye'" :size="14" />
               </button>
             </div>
-            <p v-if="pwdFieldErrors.confirmPassword" class="profile-field__error">
-              {{ pwdFieldErrors.confirmPassword }}
-            </p>
+            <p v-if="pwdFieldErrors.confirmPassword" class="profile__field-error">{{ pwdFieldErrors.confirmPassword }}</p>
           </div>
 
-          <div v-if="pwdSuccess" class="profile-feedback profile-feedback--success">
-            <KuboIcon name="check-circle" :size="14" />
-            Mot de passe mis à jour avec succès.
+          <div v-if="pwdSuccess" class="profile__feedback profile__feedback--ok">
+            <KuboIcon name="check-circle" :size="14" />Mot de passe mis à jour.
           </div>
-          <div v-if="pwdError" class="profile-feedback profile-feedback--error">
-            <KuboIcon name="alert-circle" :size="14" />
-            {{ pwdError }}
+          <div v-if="pwdError" class="profile__feedback profile__feedback--err">
+            <KuboIcon name="alert-circle" :size="14" />{{ pwdError }}
           </div>
 
-          <button type="submit" class="profile-save-btn" :disabled="pwdSaving">
-            <span v-if="pwdSaving" class="profile-save-btn__spinner" />
-            <template v-else>
-              <KuboIcon name="key" :size="15" />
-              Changer le mot de passe
-            </template>
+          <button type="submit" class="btn-sage profile__submit" :disabled="pwdSaving">
+            <span v-if="pwdSaving" class="btn-spinner" />
+            <template v-else><KuboIcon name="key" :size="14" />Changer</template>
           </button>
         </form>
       </div>
     </div>
 
-    <!-- Logout -->
-    <div class="profile-card profile-card--logout">
-      <button class="profile-logout" :disabled="isLoading" @click="logout">
-        <KuboIcon name="log-out" :size="16" />
+    <!-- Danger zone -->
+    <div class="profile__danger">
+      <button class="btn-danger" :disabled="isLoading" @click="logout">
+        <KuboIcon name="log-out" :size="14" />
         Se déconnecter
       </button>
     </div>
+
   </div>
 </template>
 
 <style scoped>
-.profile-view {
-  padding: 40px;
-  max-width: 1000px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.profile {
+  padding: 30px 36px 40px;
+  max-width: 900px;
 }
 
-@media (max-width: 768px) {
-  .profile-view {
-    padding: 24px 16px;
-  }
+.profile__header {
+  margin-bottom: 24px;
 }
-
-.profile-header {
-  margin-bottom: 4px;
-}
-.profile-header__title {
-  font-size: 24px;
-  font-weight: 900;
-  color: var(--kubo-text);
-}
-
-/* Grille côte à côte */
-.profile-cards-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-@media (max-width: 768px) {
-  .profile-cards-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Card */
-.profile-card {
-  background: var(--kubo-surface);
-  border: 1px solid var(--kubo-border);
-  border-radius: 24px;
-  padding: 28px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
-  display: flex;
-  flex-direction: column;
-}
-.profile-card--logout {
-  padding: 16px;
-}
-
-/* Section title */
-.profile-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.profile__sub {
   font-size: 14px;
-  font-weight: 800;
-  color: var(--kubo-text);
-  margin-bottom: 20px;
+  color: var(--kubo-text-muted);
+  margin-top: 8px;
 }
 
-/* Identity */
-.profile-identity {
+/* Identity card */
+.profile__identity-card {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 20px;
+  background: var(--kubo-green);
+  border-radius: var(--radius-xl);
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  color: #fffdf7;
 }
-.profile-avatar {
+.profile__identity-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.profile__avatar {
   width: 64px;
   height: 64px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 900;
+  font-weight: 700;
   font-size: 22px;
   flex-shrink: 0;
+  border: 3px solid rgba(255,253,247,.3);
 }
-.profile-identity__info {
+.profile__identity-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.profile-identity__name {
-  font-size: 17px;
-  font-weight: 900;
-  color: var(--kubo-text);
+.profile__identity-name {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  color: #fffdf7;
 }
-.profile-identity__email {
+.profile__identity-email {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--kubo-text-muted);
+  color: rgba(255,253,247,.65);
 }
-
-/* Role badge */
-.profile-role-badge {
+.profile__role-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 11px;
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: .1em;
   border-radius: 999px;
   padding: 3px 10px;
   width: fit-content;
+  background: rgba(255,253,247,.15);
+  color: #fffdf7;
 }
-.profile-role-badge--user {
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--kubo-green);
+
+/* MOCK stats */
+.profile__stats {
+  display: flex;
+  gap: 32px;
 }
-.profile-role-badge--admin {
-  background: rgba(139, 92, 246, 0.12);
-  color: #7c3aed;
+.profile__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
-.profile-role-badge--visitor {
-  background: var(--kubo-surface-mute);
+.profile__stat-val {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 28px;
+  color: #fffdf7;
+  letter-spacing: -1px;
+}
+.profile__stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: rgba(255,253,247,.6);
+}
+
+/* Two-col grid */
+.profile__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 700px) {
+  .profile__grid { grid-template-columns: 1fr; }
+}
+
+/* Card */
+.profile__card {
+  background: var(--kubo-surface);
+  border: 1px solid var(--kubo-border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-card);
+}
+.profile__card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
   color: var(--kubo-text-muted);
 }
 
 /* Form */
-.profile-form {
+.profile__form {
   display: flex;
   flex-direction: column;
   gap: 14px;
   flex: 1;
 }
-.profile-field-row {
+.profile__field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 }
-.profile-field {
+.profile__field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.profile-field__label {
+.profile__label {
   font-size: 11px;
-  font-weight: 800;
-  color: var(--kubo-text-muted);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: .08em;
+  color: var(--kubo-text-faint);
 }
-.profile-field__wrap {
+.profile__input-wrap {
   position: relative;
   display: flex;
   align-items: center;
 }
-.profile-field__input {
+.profile__input {
   width: 100%;
   padding: 10px 13px;
   background: var(--kubo-surface-mute);
@@ -544,45 +506,34 @@ async function logout(): Promise<void> {
   color: var(--kubo-text);
   outline: none;
   transition: border-color var(--transition-base);
+  box-sizing: border-box;
 }
-.profile-field__icon {
+.profile__input--left { padding-left: 36px; }
+.profile__input--right { padding-right: 38px; }
+.profile__input--error { border-color: var(--kubo-tomato); }
+.profile__input:focus { border-color: var(--kubo-green); }
+.profile__input:disabled { opacity: .5; cursor: not-allowed; }
+.profile__input-icon {
   position: absolute;
-  left: 13px;
-  color: var(--kubo-text-muted);
+  left: 12px;
+  color: var(--kubo-text-faint);
   pointer-events: none;
-  flex-shrink: 0;
 }
-.profile-field__input--padded-left {
-  padding-left: 38px;
-}
-.profile-field__input--padded-right {
-  padding-right: 40px;
-}
-.profile-field__input--error {
-  border-color: var(--kubo-danger, #ef4444);
-}
-.profile-field__input:focus {
-  border-color: var(--kubo-green);
-}
-.profile-field__input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.profile-field__eye {
+.profile__eye {
   position: absolute;
   right: 10px;
   background: none;
   border: none;
-  color: var(--kubo-text-muted);
+  color: var(--kubo-text-faint);
   cursor: pointer;
   padding: 4px;
   display: flex;
   align-items: center;
 }
-.profile-field__error {
-  font-size: 12px;
+.profile__field-error {
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--kubo-danger, #ef4444);
+  color: var(--kubo-tomato-deep);
 }
 
 /* Password rules */
@@ -590,7 +541,6 @@ async function logout(): Promise<void> {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-top: 2px;
 }
 .pwd-rule {
   display: flex;
@@ -607,12 +557,12 @@ async function logout(): Promise<void> {
 }
 .pwd-rule--ok {
   color: var(--kubo-green);
-  background: rgba(16, 185, 129, 0.08);
-  border-color: rgba(16, 185, 129, 0.3);
+  background: var(--kubo-green-light);
+  border-color: var(--kubo-sage-soft);
 }
 
 /* Feedback */
-.profile-feedback {
+.profile__feedback {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -621,83 +571,68 @@ async function logout(): Promise<void> {
   border-radius: var(--radius-lg);
   padding: 10px 13px;
 }
-.profile-feedback--success {
+.profile__feedback--ok {
   color: var(--kubo-green);
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--kubo-green-light);
+  border: 1px solid var(--kubo-sage-soft);
 }
-.profile-feedback--error {
-  color: var(--kubo-danger, #ef4444);
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+.profile__feedback--err {
+  color: var(--kubo-tomato-deep);
+  background: var(--kubo-tomato-soft);
+  border: 1px solid var(--kubo-tomato);
 }
 
-/* Save button */
-.profile-save-btn {
-  display: flex;
+/* Buttons */
+.btn-sage {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  padding: 11px 20px;
+  padding: 10px 18px;
   background: var(--kubo-green);
-  color: #fff;
+  color: #fffdf7;
   border: none;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-base);
+  border-radius: var(--radius-pill);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
-  transition: opacity var(--transition-base);
-  box-shadow: 0 4px 16px var(--kubo-green-shadow);
-  width: 100%;
-  min-height: 40px;
-  margin-top: auto;
+  font-family: var(--font-base);
+  transition: filter var(--transition-base);
 }
-.profile-save-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-.profile-save-btn:not(:disabled):hover {
-  opacity: 0.9;
-}
-.profile-save-btn__spinner {
+.btn-sage:hover { filter: brightness(1.08); }
+.btn-sage:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+
+.profile__submit { width: 100%; justify-content: center; margin-top: auto; }
+
+.btn-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255,255,255,.4);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: spin .7s linear infinite;
 }
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Logout */
-.profile-logout {
-  width: 100%;
+/* Danger zone */
+.profile__danger {
   display: flex;
+  justify-content: flex-start;
+}
+.btn-danger {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  padding: 12px;
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: var(--radius-lg);
-  color: var(--kubo-danger, #ef4444);
-  font-family: var(--font-base);
+  padding: 10px 18px;
+  background: var(--kubo-tomato-soft);
+  border: 1px solid var(--kubo-tomato);
+  color: var(--kubo-tomato-deep);
+  border-radius: var(--radius-pill);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
+  font-family: var(--font-base);
   transition: all var(--transition-base);
 }
-.profile-logout:hover {
-  background: rgba(239, 68, 68, 0.12);
-}
-.profile-logout:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.btn-danger:hover { background: var(--kubo-tomato); color: #fff; }
+.btn-danger:disabled { opacity: .5; cursor: not-allowed; }
 </style>

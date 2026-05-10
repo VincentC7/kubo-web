@@ -119,12 +119,10 @@ onBeforeUnmount(() => {
     <!-- Header -->
     <header class="catalog__header">
       <div>
-        <h1 class="catalog__title">Explorer les Recettes</h1>
+        <h1 class="kb-h1">Catalogue <span class="roman">de recettes.</span></h1>
         <p class="catalog__sub">
           Découvrez les saveurs de la semaine.
-          <span class="catalog__counter"
-            >{{ selectedRecipes.length }} / {{ mealsGoal }} sélectionnés</span
-          >
+          <span class="catalog__counter">{{ selectedRecipes.length }}&thinsp;/&thinsp;{{ mealsGoal }} au menu</span>
         </p>
       </div>
       <div class="catalog__actions">
@@ -229,96 +227,91 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .catalog {
-  padding: 48px;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 30px 36px 40px;
+  width: 100%;
+  box-sizing: border-box;
 }
 @media (max-width: 768px) {
-  .catalog {
-    padding: 24px;
-  }
+  .catalog { padding: 24px 16px; }
 }
 
 .catalog__header {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-bottom: 36px;
+  margin-bottom: 28px;
 }
 @media (min-width: 768px) {
   .catalog__header {
     flex-direction: row;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
   }
 }
 
-.catalog__title {
-  font-size: 36px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  color: var(--kubo-text);
-}
 .catalog__sub {
   font-size: 14px;
-  font-weight: 600;
   color: var(--kubo-text-muted);
-  margin-top: 4px;
+  margin-top: 8px;
 }
 .catalog__counter {
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 12px;
-  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
   color: var(--kubo-green);
   background: var(--kubo-green-light);
   padding: 2px 10px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
 }
 
 .catalog__actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 /* Sections */
 .catalog__section {
-  margin-bottom: 48px;
+  margin-bottom: 40px;
 }
 
 .catalog__section-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--kubo-border);
+  margin-bottom: 18px;
 }
 
 .catalog__section-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
   font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.3px;
   color: var(--kubo-text);
 }
 
 .catalog__week-badge {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--kubo-green);
   background: var(--kubo-green-light);
   padding: 3px 10px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
 }
 
 .catalog__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
 }
 
 .catalog__empty {

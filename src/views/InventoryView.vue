@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/**
- * InventoryView — Vue inventaire des ingrédients en stock
- */
 import { onMounted, ref, computed } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
@@ -15,17 +12,12 @@ const uiStore = useUiStore()
 
 onMounted(() => inventoryStore.fetchInventory())
 
-// ── Formulaire d'ajout ────────────────────────────────────────────────────────
 const showForm = ref(false)
 const submitting = ref(false)
 const nameError = ref('')
 
 const form = ref<CreateInventoryItem>({
-  name: '',
-  quantity: 1,
-  unit: '',
-  category: '',
-  expiresAt: '',
+  name: '', quantity: 1, unit: '', category: '', expiresAt: '',
 })
 
 const isFormValid = computed(() => form.value.name.trim().length > 0)
@@ -60,125 +52,116 @@ async function submitAdd() {
   }
 }
 
-function statusLabel(status: string | null) {
-  if (status === 'expiring_soon') return 'Bientôt périmé'
-  if (status === 'expired') return 'Périmé'
-  return null
+const CAT_META: Record<string, { emoji: string; tone: string }> = {
+  'Légumes':   { emoji: '🥬', tone: 'sage' },
+  'Frais':     { emoji: '🥛', tone: 'blue' },
+  'Épicerie':  { emoji: '🌾', tone: 'ochre' },
+  'Viande':    { emoji: '🥩', tone: 'tomato' },
+  'Boissons':  { emoji: '🧃', tone: 'blue' },
 }
+function catMeta(cat: string) { return CAT_META[cat] ?? { emoji: '📦', tone: 'mute' } }
+
+const STATUS_MAP = {
+  expiring_soon: { label: 'Bientôt', color: 'var(--kubo-ochre)', bg: 'var(--kubo-ochre-soft)' },
+  expired:       { label: 'Périmé',  color: 'var(--kubo-tomato-deep)', bg: 'var(--kubo-tomato-soft)' },
+  ok:            { label: 'OK',      color: 'var(--kubo-green)', bg: 'var(--kubo-green-light)' },
+}
+
+function statusInfo(status: string | null) {
+  return STATUS_MAP[status as keyof typeof STATUS_MAP] ?? STATUS_MAP.ok
+}
+
+// mock estimated value
+const estimatedValue = computed(() => (items.value.length * 3.2).toFixed(0))
+const autonomyDays = computed(() => Math.min(14, Math.round(items.value.length * 0.9)))
 </script>
 
 <template>
   <div class="inventory fade-in" data-testid="inventory-view">
-    <header class="inventory__header">
+
+    <!-- Header -->
+    <div class="inventory__header">
       <div>
-        <h1 class="inventory__title">Inventaire</h1>
-        <p class="inventory__sub">Vos ingrédients en stock.</p>
+        <h1 class="kb-h1">Garde-<span class="roman">manger.</span></h1>
+        <p class="inventory__sub">{{ items.length }} ingrédient{{ items.length > 1 ? 's' : '' }} suivis · mis à jour depuis votre liste de courses.</p>
       </div>
-      <div class="inventory__stats">
-        <div class="inventory__stat-card">
-          <KuboIcon name="package" :size="18" class="inventory__stat-icon" />
-          <div>
-            <p class="inventory__stat-label">En stock</p>
-            <p class="inventory__stat-value" data-testid="inventory-count">{{ items.length }}</p>
-          </div>
-        </div>
-        <div v-if="expiringSoon.length" class="inventory__stat-card inventory__stat-card--warn">
-          <KuboIcon name="alert-triangle" :size="18" class="inventory__stat-icon--warn" />
-          <div>
-            <p class="inventory__stat-label">Bientôt périmés</p>
-            <p class="inventory__stat-value">{{ expiringSoon.length }}</p>
-          </div>
-        </div>
-        <div v-if="expired.length" class="inventory__stat-card inventory__stat-card--danger">
-          <KuboIcon name="x-circle" :size="18" class="inventory__stat-icon--danger" />
-          <div>
-            <p class="inventory__stat-label">Périmés</p>
-            <p class="inventory__stat-value">{{ expired.length }}</p>
-          </div>
-        </div>
-        <button class="inventory__add-btn" @click="showForm = !showForm">
-          <KuboIcon :name="showForm ? 'x' : 'plus'" :size="15" />
+      <div class="inventory__header-actions">
+        <button class="btn-ghost-line" @click="showForm = !showForm">
+          <KuboIcon :name="showForm ? 'x' : 'plus'" :size="13" />
           {{ showForm ? 'Annuler' : 'Ajouter' }}
         </button>
       </div>
-    </header>
+    </div>
 
-    <!-- Formulaire d'ajout -->
+    <!-- Bento header stats -->
+    <div class="inventory__bento-header">
+      <!-- À utiliser vite — tomate -->
+      <div class="bento-card bento-tomato bento-col-4">
+        <div class="bento-col-header">
+          <KuboIcon name="alert-triangle" :size="16" />
+          <span class="kb-eyebrow" style="color: var(--kubo-tomato-deep)">À utiliser vite</span>
+        </div>
+        <div class="bento-big-num" style="color: var(--kubo-text);">{{ expired.length + expiringSoon.length }}</div>
+        <div style="font-size: 12px; color: var(--kubo-text-muted); margin-top: 6px;">
+          <b>{{ expired.length }}</b> périmé{{ expired.length > 1 ? 's' : '' }} · <b>{{ expiringSoon.length }}</b> dans les 48 h
+        </div>
+      </div>
+
+      <!-- Valeur estimée — sauge (mock) -->
+      <div class="bento-card bento-sage bento-col-4">
+        <div class="kb-eyebrow" style="color: rgba(255,253,247,.65)">Valeur estimée</div>
+        <div class="bento-big-num">{{ estimatedValue }}<span class="bento-big-unit">€</span></div>
+        <div style="font-size: 12px; opacity: .85; margin-top: 8px;">
+          soit ~<b>{{ autonomyDays }} jours</b> d'autonomie
+        </div>
+      </div>
+
+      <!-- Suggestion fraîche (mock) -->
+      <div class="bento-card bento-col-4 inventory__suggestion">
+        <div class="kb-eyebrow">Suggestion fraîche</div>
+        <div style="font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 17px; margin-top: 8px; line-height: 1.25; color: var(--kubo-text);">
+          Utilisez vos ingrédients qui expirent bientôt.
+        </div>
+        <div style="font-size: 11.5px; color: var(--kubo-text-muted); margin-top: 6px; line-height: 1.5;">
+          {{ expiringSoon.length + expired.length }} ingrédient{{ expiringSoon.length + expired.length > 1 ? 's' : '' }} à cuisiner en priorité.
+        </div>
+        <button class="btn-sage btn-sm" style="margin-top: 12px; width: fit-content;" @click="uiStore.navTo('catalog')">
+          <KuboIcon name="sparkles" :size="12" />Voir les recettes
+        </button>
+      </div>
+    </div>
+
+    <!-- Add form -->
     <Transition name="form-slide">
       <div v-if="showForm" class="inventory__form-card">
         <h2 class="inventory__form-title">Ajouter un ingrédient</h2>
         <div class="inventory__form-grid">
-          <!-- Nom -->
           <div class="inventory__field inventory__field--wide">
-            <label class="inventory__label" for="inv-name">
-              Nom <span class="inventory__label-required">*</span>
-            </label>
-            <input
-              id="inv-name"
-              v-model="form.name"
-              :class="['inventory__input', { 'inventory__input--error': nameError }]"
-              placeholder="ex. Carottes"
-              autocomplete="off"
-              @blur="validateName"
-            />
-            <p v-if="nameError" class="inventory__field-error">
-              <KuboIcon name="alert-circle" :size="12" />
-              {{ nameError }}
-            </p>
+            <label class="inventory__label" for="inv-name">Nom <span style="color: var(--kubo-tomato)">*</span></label>
+            <input id="inv-name" v-model="form.name" :class="['inventory__input', { 'inventory__input--error': nameError }]" placeholder="ex. Carottes" @blur="validateName" />
+            <p v-if="nameError" class="inventory__field-error"><KuboIcon name="alert-circle" :size="12" />{{ nameError }}</p>
           </div>
-
-          <!-- Quantité -->
           <div class="inventory__field">
             <label class="inventory__label" for="inv-qty">Quantité</label>
-            <input
-              id="inv-qty"
-              v-model.number="form.quantity"
-              type="number"
-              min="0"
-              class="inventory__input"
-              placeholder="1"
-            />
+            <input id="inv-qty" v-model.number="form.quantity" type="number" min="0" class="inventory__input" placeholder="1" />
           </div>
-
-          <!-- Unité -->
           <div class="inventory__field">
             <label class="inventory__label" for="inv-unit">Unité</label>
-            <input
-              id="inv-unit"
-              v-model="form.unit"
-              class="inventory__input"
-              placeholder="kg, L, pcs…"
-            />
+            <input id="inv-unit" v-model="form.unit" class="inventory__input" placeholder="kg, L, pcs…" />
           </div>
-
-          <!-- Catégorie -->
           <div class="inventory__field inventory__field--wide">
             <label class="inventory__label" for="inv-cat">Catégorie</label>
-            <input
-              id="inv-cat"
-              v-model="form.category"
-              class="inventory__input"
-              placeholder="ex. Légumes"
-            />
+            <input id="inv-cat" v-model="form.category" class="inventory__input" placeholder="ex. Légumes" />
           </div>
-
-          <!-- Date d'expiration -->
           <div class="inventory__field inventory__field--wide">
             <label class="inventory__label" for="inv-expires">Date d'expiration</label>
             <input id="inv-expires" v-model="form.expiresAt" type="date" class="inventory__input" />
           </div>
         </div>
-
         <div class="inventory__form-actions">
-          <button class="inventory__form-cancel" :disabled="submitting" @click="resetForm">
-            Annuler
-          </button>
-          <button
-            class="inventory__form-submit"
-            :disabled="!isFormValid || submitting"
-            @click="submitAdd"
-          >
-            <span v-if="submitting" class="inventory__btn-spinner" />
+          <button class="btn-ghost-line" :disabled="submitting" @click="resetForm">Annuler</button>
+          <button class="btn-sage" :disabled="!isFormValid || submitting" @click="submitAdd">
+            <span v-if="submitting" class="spinner-white" />
             <KuboIcon v-else name="plus" :size="14" />
             {{ submitting ? 'Ajout…' : 'Ajouter' }}
           </button>
@@ -186,54 +169,53 @@ function statusLabel(status: string | null) {
       </div>
     </Transition>
 
-    <!-- Loading initial -->
+    <!-- Loading -->
     <div v-if="loading" class="inventory__loading">
-      <span class="inventory__spinner" />
+      <span class="spinner-sage" />
     </div>
 
-    <!-- Liste par catégorie -->
+    <!-- Category grid -->
     <template v-else-if="items.length">
-      <div
-        v-for="(catItems, category) in itemsByCategory"
-        :key="category"
-        class="inventory__section"
-      >
-        <h2 class="inventory__section-title">
-          <span class="inventory__section-dot" />
-          {{ category }}
-        </h2>
-        <div class="inventory__grid">
+      <div class="inventory__grid">
+        <div
+          v-for="([cat, catItems]) in Object.entries(itemsByCategory)"
+          :key="cat"
+          class="bento-card inventory__cat-card"
+        >
+          <div class="inventory__cat-header">
+            <div class="inventory__cat-icon" :class="`inventory__cat-icon--${catMeta(cat).tone}`">
+              {{ catMeta(cat).emoji }}
+            </div>
+            <div>
+              <div class="inventory__cat-title">{{ cat }}</div>
+              <div class="kb-eyebrow" style="margin-top: 2px;">{{ catItems.length }} ARTICLES</div>
+            </div>
+            <button class="inventory__cat-add" @click="form.category = cat; showForm = true">
+              <KuboIcon name="plus" :size="13" />
+            </button>
+          </div>
+
           <div
-            v-for="item in catItems"
+            v-for="(item, i) in catItems"
             :key="item.id"
-            :class="[
-              'inventory__item',
-              item.status === 'expired' && 'inventory__item--expired',
-              item.status === 'expiring_soon' && 'inventory__item--warn',
-            ]"
+            :class="['inventory__item', { 'inventory__item--first': i === 0 }]"
           >
-            <div
-              :class="[
-                'inventory__item-icon',
-                item.status && 'inventory__item-icon--' + item.status,
-              ]"
-            >
+            <div class="inventory__item-icon">
               <KuboIcon name="package" :size="16" />
             </div>
             <div class="inventory__item-info">
-              <span class="inventory__item-name">{{ item.name }}</span>
-              <span class="inventory__item-qty">
-                {{ item.quantity }}{{ item.unit ? ' ' + item.unit : '' }}
-              </span>
-              <span v-if="statusLabel(item.status)" class="inventory__item-status">
-                {{ statusLabel(item.status) }}
-              </span>
+              <div class="inventory__item-name">{{ item.name }}</div>
+              <div class="inventory__item-qty">{{ item.quantity }}{{ item.unit ? ' ' + item.unit : '' }}</div>
             </div>
-            <button
-              class="inventory__item-remove"
-              title="Retirer"
-              @click="inventoryStore.removeItem(item.id)"
+            <span
+              v-if="item.status"
+              class="inventory__item-badge"
+              :style="{ background: statusInfo(item.status).bg, color: statusInfo(item.status).color }"
             >
+              <span class="inventory__badge-dot" :style="{ background: statusInfo(item.status).color }" />
+              {{ statusInfo(item.status).label }}
+            </span>
+            <button class="inventory__item-remove" @click="inventoryStore.removeItem(item.id)">
               <KuboIcon name="x" :size="14" />
             </button>
           </div>
@@ -241,18 +223,15 @@ function statusLabel(status: string | null) {
       </div>
     </template>
 
-    <!-- État vide -->
+    <!-- Empty -->
     <div v-else-if="!loading" class="inventory__empty">
       <div class="inventory__empty-icon">
         <KuboIcon name="box" :size="32" />
       </div>
       <p class="inventory__empty-title">Votre inventaire est vide</p>
-      <p class="inventory__empty-hint">
-        Ajoutez vos ingrédients en stock pour suivre les dates d'expiration et éviter le gaspillage.
-      </p>
-      <button class="inventory__empty-cta" @click="showForm = true">
-        <KuboIcon name="plus" :size="15" />
-        Ajouter un ingrédient
+      <p class="inventory__empty-hint">Ajoutez vos ingrédients en stock pour suivre les dates d'expiration et éviter le gaspillage.</p>
+      <button class="btn-sage" style="margin-top: 8px;" @click="showForm = true">
+        <KuboIcon name="plus" :size="14" />Ajouter un ingrédient
       </button>
     </div>
   </div>
@@ -260,462 +239,241 @@ function statusLabel(status: string | null) {
 
 <style scoped>
 .inventory {
-  padding: 48px;
-  max-width: 960px;
-  margin: 0 auto;
-}
-@media (max-width: 768px) {
-  .inventory {
-    padding: 24px;
-  }
+  padding: 30px 36px 40px;
 }
 
 .inventory__header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
+  align-items: flex-end;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 40px;
-}
-.inventory__title {
-  font-size: 36px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  color: var(--kubo-text);
+  gap: 12px;
+  margin-bottom: 22px;
 }
 .inventory__sub {
   font-size: 14px;
-  font-weight: 600;
   color: var(--kubo-text-muted);
-  margin-top: 4px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.inventory__header-actions { display: flex; gap: 10px; }
+
+/* Buttons */
+.btn-sage {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: var(--kubo-green); color: #fffdf7;
+  border: none; border-radius: var(--radius-pill);
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font-base);
+  transition: filter var(--transition-base);
+}
+.btn-sage:hover { filter: brightness(1.08); }
+.btn-sage:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+.btn-sm { padding: 7px 12px; font-size: 12px; }
+
+.btn-ghost-line {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: transparent; color: var(--kubo-text);
+  border: 1px solid var(--kubo-border); border-radius: var(--radius-pill);
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font-base);
+}
+.btn-ghost-line:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Bento header */
+.inventory__bento-header {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
-.inventory__stats {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.inventory__stat-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
+.bento-card {
   background: var(--kubo-surface);
   border: 1px solid var(--kubo-border);
   border-radius: var(--radius-xl);
+  padding: 22px;
   box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
 }
-.inventory__stat-card--warn {
-  border-color: #fbbf24;
-}
-.inventory__stat-card--danger {
-  border-color: #ef4444;
-}
-.inventory__stat-icon {
-  color: var(--kubo-green);
-}
-.inventory__stat-icon--warn {
-  color: #f59e0b;
-}
-.inventory__stat-icon--danger {
-  color: #ef4444;
-}
-.inventory__stat-label {
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--kubo-text-muted);
-}
-.inventory__stat-value {
-  font-size: 18px;
-  font-weight: 900;
-  color: var(--kubo-text);
-}
+.bento-col-4 { grid-column: span 4; }
+.bento-sage   { background: var(--kubo-green); color: #fffdf7; border-color: transparent; }
+.bento-tomato { background: var(--kubo-tomato-soft); border-color: transparent; }
 
-.inventory__add-btn {
+.bento-col-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: var(--kubo-green);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-xl);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity var(--transition-base);
-}
-.inventory__add-btn:hover {
-  opacity: 0.85;
+  gap: 10px;
 }
 
-/* Formulaire */
-.form-slide-enter-active,
-.form-slide-leave-active {
-  transition: all 0.25s ease;
-  overflow: hidden;
+.bento-big-num {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 64px;
+  letter-spacing: -2.5px;
+  line-height: 1;
+  margin-top: 10px;
 }
-.form-slide-enter-from,
-.form-slide-leave-to {
-  opacity: 0;
-  max-height: 0;
-  margin-bottom: 0;
+.bento-big-unit {
+  font-style: normal; font-size: 24px; opacity: .55; margin-left: 4px;
 }
-.form-slide-enter-to,
-.form-slide-leave-from {
-  opacity: 1;
-  max-height: 600px;
-  margin-bottom: 32px;
+
+.inventory__suggestion { }
+
+/* Add form */
+.form-slide-enter-active, .form-slide-leave-active {
+  transition: all 0.25s ease; overflow: hidden;
 }
+.form-slide-enter-from, .form-slide-leave-to { opacity: 0; max-height: 0; margin-bottom: 0; }
+.form-slide-enter-to, .form-slide-leave-from { opacity: 1; max-height: 600px; margin-bottom: 24px; }
 
 .inventory__form-card {
   background: var(--kubo-surface);
   border: 1px solid var(--kubo-green);
   border-radius: var(--radius-xl);
-  padding: 28px;
-  margin-bottom: 32px;
+  padding: 24px;
+  margin-bottom: 24px;
   box-shadow: 0 0 0 4px var(--kubo-green-shadow);
 }
 .inventory__form-title {
-  font-size: 16px;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 18px;
   color: var(--kubo-text);
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
-
 .inventory__form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;
 }
-@media (max-width: 600px) {
-  .inventory__form-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.inventory__field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.inventory__field--wide {
-  grid-column: 1 / -1;
-}
-
-.inventory__label {
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--kubo-text-muted);
-}
-.inventory__label-required {
-  color: #ef4444;
-  margin-left: 2px;
-}
-
+.inventory__field { display: flex; flex-direction: column; gap: 6px; }
+.inventory__field--wide { grid-column: 1 / -1; }
+.inventory__label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--kubo-text-muted); }
 .inventory__input {
   padding: 10px 14px;
   background: var(--kubo-surface-mute);
   border: 1.5px solid var(--kubo-border);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: 13.5px;
   font-family: var(--font-base);
   color: var(--kubo-text);
-  transition:
-    border-color var(--transition-base),
-    box-shadow var(--transition-base);
-}
-.inventory__input:focus {
   outline: none;
-  border-color: var(--kubo-green);
-  box-shadow: 0 0 0 3px var(--kubo-green-shadow);
-}
-.inventory__input--error {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
-}
-.inventory__field-error {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #ef4444;
-}
-
-.inventory__form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-.inventory__form-cancel {
-  padding: 10px 20px;
-  background: transparent;
-  border: 1.5px solid var(--kubo-border);
-  border-radius: var(--radius-lg);
-  font-size: 13px;
-  font-weight: 700;
-  font-family: var(--font-base);
-  color: var(--kubo-text-muted);
-  cursor: pointer;
   transition: border-color var(--transition-base);
 }
-.inventory__form-cancel:hover {
-  border-color: var(--kubo-text-muted);
+.inventory__input:focus { border-color: var(--kubo-green); }
+.inventory__input--error { border-color: var(--kubo-tomato); }
+.inventory__field-error {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; color: var(--kubo-tomato-deep);
 }
-.inventory__form-cancel:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.inventory__form-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
-.inventory__form-submit {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 24px;
-  background: var(--kubo-green);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-lg);
-  font-size: 13px;
-  font-weight: 700;
-  font-family: var(--font-base);
-  cursor: pointer;
-  transition: opacity var(--transition-base);
-}
-.inventory__form-submit:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.inventory__form-submit:not(:disabled):hover {
-  opacity: 0.88;
-}
-
-.inventory__btn-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-  flex-shrink: 0;
-}
-
-/* Section */
-.inventory__section {
-  margin-bottom: 32px;
-}
-.inventory__section-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--kubo-text);
-  margin-bottom: 16px;
-}
-.inventory__section-dot {
-  width: 6px;
-  height: 18px;
-  background: var(--kubo-green);
-  border-radius: 99px;
-  flex-shrink: 0;
-}
-
+/* Category grid */
 .inventory__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding-bottom: 40px;
 }
 
+.inventory__cat-card { padding: 20px; }
+.inventory__cat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--kubo-border);
+}
+.inventory__cat-icon {
+  width: 38px; height: 38px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.inventory__cat-icon--sage   { background: var(--kubo-green-light); }
+.inventory__cat-icon--blue   { background: var(--kubo-blue-soft); }
+.inventory__cat-icon--ochre  { background: var(--kubo-ochre-soft); }
+.inventory__cat-icon--tomato { background: var(--kubo-tomato-soft); }
+.inventory__cat-icon--mute   { background: var(--kubo-surface-mute); }
+
+.inventory__cat-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: -0.3px;
+  color: var(--kubo-text);
+}
+.inventory__cat-add {
+  margin-left: auto;
+  width: 30px; height: 30px; border-radius: 10px;
+  background: var(--kubo-surface-mute);
+  border: 1px solid var(--kubo-border);
+  color: var(--kubo-text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all var(--transition-base);
+}
+.inventory__cat-add:hover { border-color: var(--kubo-green); color: var(--kubo-green); }
+
+/* Items */
 .inventory__item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  background: var(--kubo-surface);
-  border: 1px solid var(--kubo-border);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-base);
+  padding: 11px 0;
+  border-top: 1px dashed var(--kubo-border);
 }
-.inventory__item:hover {
-  border-color: var(--kubo-border-mid);
-  box-shadow: var(--shadow-card);
-}
-.inventory__item--warn {
-  background: #fffbeb;
-  border-color: #fde68a;
-}
-.inventory__item--expired {
-  background: #fef2f2;
-  border-color: #fecaca;
-}
-:global(.dark) .inventory__item--warn {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.3);
-}
-:global(.dark) .inventory__item--expired {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-}
+.inventory__item--first { border-top: none; }
 
 .inventory__item-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-xs);
-  background: var(--kubo-green-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--kubo-green);
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--kubo-bg-2, var(--kubo-surface-mute));
+  color: var(--kubo-text-muted);
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.inventory__item-icon--expiring_soon {
-  background: #fef3c7;
-  color: #f59e0b;
-}
-.inventory__item-icon--expired {
-  background: #fef2f2;
-  color: #ef4444;
-}
-:global(.dark) .inventory__item-icon--expiring_soon {
-  background: rgba(245, 158, 11, 0.15);
-}
-:global(.dark) .inventory__item-icon--expired {
-  background: rgba(239, 68, 68, 0.15);
-}
+.inventory__item-info { flex: 1; min-width: 0; }
+.inventory__item-name { font-size: 13px; font-weight: 700; color: var(--kubo-text); }
+.inventory__item-qty { font-size: 10.5px; color: var(--kubo-text-faint); font-family: var(--font-mono); font-weight: 600; margin-top: 2px; }
 
-.inventory__item-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.inventory__item-name {
-  font-size: 13px;
+.inventory__item-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 9.5px;
   font-weight: 700;
-  color: var(--kubo-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  letter-spacing: .04em;
+  flex-shrink: 0;
 }
-.inventory__item-qty {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--kubo-green);
-}
-.inventory__item-status {
-  font-size: 10px;
-  font-weight: 700;
-  color: #f59e0b;
-}
-.inventory__item--expired .inventory__item-status {
-  color: #ef4444;
-}
+.inventory__badge-dot { width: 5px; height: 5px; border-radius: 3px; }
 
 .inventory__item-remove {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  color: var(--kubo-text-muted);
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-base);
-  flex-shrink: 0;
-  opacity: 0.35;
+  width: 28px; height: 28px; border: none; background: transparent;
+  color: var(--kubo-text-faint); border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: .4; transition: opacity var(--transition-base);
 }
-.inventory__item-remove:hover {
-  background: #fef2f2;
-  color: #ef4444;
-  opacity: 1;
-}
-:global(.dark) .inventory__item-remove:hover {
-  background: rgba(239, 68, 68, 0.15);
-}
+.inventory__item-remove:hover { opacity: 1; color: var(--kubo-tomato-deep); }
 
-/* Loading */
-.inventory__loading {
-  display: flex;
-  justify-content: center;
-  padding: 40px 0;
-}
-.inventory__spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid var(--kubo-border);
-  border-top-color: var(--kubo-green);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+/* Loading / Empty */
+.inventory__loading { display: flex; justify-content: center; padding: 40px 0; }
+.inventory__empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 60px 24px; text-align: center; }
+.inventory__empty-icon { width: 80px; height: 80px; background: var(--kubo-surface-mute); border-radius: var(--radius-2xl); display: flex; align-items: center; justify-content: center; color: var(--kubo-text-muted); }
+.inventory__empty-title { font-size: 20px; font-weight: 700; color: var(--kubo-text); }
+.inventory__empty-hint { font-size: 14px; color: var(--kubo-text-muted); max-width: 380px; line-height: 1.6; }
 
-/* Empty state */
-.inventory__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 80px 24px;
-  text-align: center;
+/* Spinners */
+.spinner-white { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+.spinner-sage  { width: 28px; height: 28px; border: 3px solid var(--kubo-border); border-top-color: var(--kubo-green); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .inventory__bento-header { grid-template-columns: repeat(6, 1fr); }
+  .bento-col-4 { grid-column: span 6; }
+  .inventory__grid { grid-template-columns: 1fr 1fr; }
 }
-.inventory__empty-icon {
-  width: 80px;
-  height: 80px;
-  background: var(--kubo-surface-mute);
-  border-radius: var(--radius-2xl);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--kubo-text-muted);
-}
-.inventory__empty-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--kubo-text);
-}
-.inventory__empty-hint {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--kubo-text-muted);
-  max-width: 380px;
-  line-height: 1.6;
-}
-.inventory__empty-cta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 28px;
-  background: var(--kubo-green);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-xl);
-  font-size: 14px;
-  font-weight: 700;
-  font-family: var(--font-base);
-  cursor: pointer;
-  margin-top: 8px;
-  transition:
-    opacity var(--transition-base),
-    transform var(--transition-bounce);
-}
-.inventory__empty-cta:hover {
-  opacity: 0.88;
-  transform: scale(1.02);
+@media (max-width: 600px) {
+  .inventory__grid { grid-template-columns: 1fr; }
 }
 </style>

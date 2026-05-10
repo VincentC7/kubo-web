@@ -1,10 +1,5 @@
 <script setup lang="ts">
-/**
- * SettingsView — Vue paramètres : modules, objectifs, dark mode
- */
 import { ref, watch } from 'vue'
-import KuboCard from '@/components/ui/KuboCard.vue'
-import KuboButton from '@/components/ui/KuboButton.vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
@@ -21,23 +16,14 @@ const { updatePortions, updateMealsGoal } = userStore
 const localShowInventory = ref(showInventory.value)
 const localShowGroceries = ref(showGroceries.value)
 
-watch(showInventory, (v) => {
-  localShowInventory.value = v
-})
-watch(showGroceries, (v) => {
-  localShowGroceries.value = v
-})
+watch(showInventory, (v) => { localShowInventory.value = v })
+watch(showGroceries, (v) => { localShowGroceries.value = v })
 
-// Valeurs locales pour debounce (affichage immédiat, PATCH retardé)
 const localPortions = ref(portions.value)
 const localMealsGoal = ref(mealsGoal.value)
 
-watch(portions, (v) => {
-  localPortions.value = v
-})
-watch(mealsGoal, (v) => {
-  localMealsGoal.value = v
-})
+watch(portions, (v) => { localPortions.value = v })
+watch(mealsGoal, (v) => { localMealsGoal.value = v })
 
 let portionsTimer: ReturnType<typeof setTimeout> | null = null
 let mealsTimer: ReturnType<typeof setTimeout> | null = null
@@ -71,241 +57,297 @@ function save(): void {
 
 <template>
   <div class="settings fade-in" data-testid="settings-view">
-    <header class="settings__header">
-      <h1 class="settings__title">Paramètres</h1>
-    </header>
 
-    <div class="settings__stack">
-      <!-- Module Inventaire -->
-      <KuboCard rounded="2xl" class="settings__card settings__card--row">
-        <div class="settings__module-left">
-          <div class="settings__module-icon-wrap">
-            <KuboIcon name="box" :size="22" class="settings__card-icon" />
-          </div>
-          <div>
-            <h3 class="settings__module-title">Module Inventaire</h3>
-            <p class="settings__module-desc">Gérer vos stocks d'ingrédients</p>
-          </div>
-        </div>
-        <button
-          :class="['settings__toggle', { 'settings__toggle--on': localShowInventory }]"
-          :aria-checked="localShowInventory"
-          role="switch"
-          aria-label="Activer le module Inventaire"
-          data-testid="inventory-toggle"
-          @click="localShowInventory = !localShowInventory"
-        >
-          <span class="settings__toggle-thumb" />
-        </button>
-      </KuboCard>
-
-      <!-- Module Courses -->
-      <KuboCard rounded="2xl" class="settings__card settings__card--row">
-        <div class="settings__module-left">
-          <div class="settings__module-icon-wrap">
-            <KuboIcon name="shopping-cart" :size="22" class="settings__card-icon" />
-          </div>
-          <div>
-            <h3 class="settings__module-title">Module Courses</h3>
-            <p class="settings__module-desc">Liste de courses automatique</p>
-          </div>
-        </div>
-        <button
-          :class="['settings__toggle', { 'settings__toggle--on': localShowGroceries }]"
-          :aria-checked="localShowGroceries"
-          role="switch"
-          aria-label="Activer le module Courses"
-          data-testid="groceries-toggle"
-          @click="localShowGroceries = !localShowGroceries"
-        >
-          <span class="settings__toggle-thumb" />
-        </button>
-      </KuboCard>
-
-      <!-- Objectifs -->
-      <KuboCard rounded="2xl" class="settings__card">
-        <h3 class="settings__card-title">
-          <KuboIcon name="user" :size="18" class="settings__card-icon" />
-          Mon foyer
-        </h3>
-        <div class="settings__steppers">
-          <!-- Portions -->
-          <div class="settings__stepper">
-            <span class="settings__stepper-label">Nombre de portions</span>
-            <div class="settings__stepper-ctrl">
-              <button class="settings__stepper-btn" @click="changePortions(-1)">
-                <KuboIcon name="minus" :size="14" />
-              </button>
-              <span class="settings__stepper-value" data-testid="portions-value">{{
-                localPortions
-              }}</span>
-              <button class="settings__stepper-btn" @click="changePortions(1)">
-                <KuboIcon name="plus" :size="14" />
-              </button>
-            </div>
-          </div>
-          <!-- Repas / semaine -->
-          <div class="settings__stepper">
-            <span class="settings__stepper-label">Repas / semaine</span>
-            <div class="settings__stepper-ctrl">
-              <button class="settings__stepper-btn" @click="changeMealsGoal(-1)">
-                <KuboIcon name="minus" :size="14" />
-              </button>
-              <span class="settings__stepper-value" data-testid="meals-goal-value">{{
-                localMealsGoal
-              }}</span>
-              <button class="settings__stepper-btn" @click="changeMealsGoal(1)">
-                <KuboIcon name="plus" :size="14" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </KuboCard>
-
-      <!-- Dark mode -->
-      <KuboCard rounded="2xl" class="settings__card settings__card--row">
-        <div class="settings__dark-left">
-          <div class="settings__dark-icon-wrap">
-            <KuboIcon :name="darkMode ? 'sun' : 'moon'" :size="22" class="settings__card-icon" />
-          </div>
-          <div>
-            <h3 class="settings__dark-title">Mode sombre</h3>
-            <p class="settings__dark-sub">Style &amp; Confort</p>
-          </div>
-        </div>
-        <button
-          :class="['settings__toggle', { 'settings__toggle--on': darkMode }]"
-          :aria-checked="darkMode"
-          role="switch"
-          aria-label="Activer le mode sombre"
-          data-testid="darkmode-toggle"
-          @click="toggleDarkMode"
-        >
-          <span class="settings__toggle-thumb" />
-        </button>
-      </KuboCard>
+    <!-- Header -->
+    <div class="settings__header">
+      <h1 class="kb-h1">Paramètres<span class="roman">.</span></h1>
+      <p class="settings__sub">Personnalisez votre expérience Kubo.</p>
     </div>
 
-    <KuboButton
-      variant="primary"
-      size="lg"
-      :full-width="true"
-      class="settings__save"
-      data-testid="settings-save-btn"
-      @click="save"
-    >
-      Sauvegarder
-    </KuboButton>
+    <div class="settings__grid">
+
+      <!-- Modules -->
+      <div class="settings__section">
+        <p class="settings__section-label">Modules</p>
+
+        <div class="settings__card">
+          <!-- Inventaire -->
+          <div class="settings__row">
+            <div class="settings__row-left">
+              <div class="settings__icon-wrap settings__icon-wrap--ochre">
+                <KuboIcon name="box" :size="18" />
+              </div>
+              <div>
+                <p class="settings__row-title">Inventaire</p>
+                <p class="settings__row-desc">Gérer vos stocks d'ingrédients</p>
+              </div>
+            </div>
+            <button
+              :class="['settings__toggle', { 'settings__toggle--on': localShowInventory }]"
+              :aria-checked="localShowInventory"
+              role="switch"
+              aria-label="Activer le module Inventaire"
+              data-testid="inventory-toggle"
+              @click="localShowInventory = !localShowInventory"
+            >
+              <span class="settings__toggle-thumb" />
+            </button>
+          </div>
+
+          <div class="settings__divider" />
+
+          <!-- Courses -->
+          <div class="settings__row">
+            <div class="settings__row-left">
+              <div class="settings__icon-wrap settings__icon-wrap--blue">
+                <KuboIcon name="shopping-cart" :size="18" />
+              </div>
+              <div>
+                <p class="settings__row-title">Courses</p>
+                <p class="settings__row-desc">Liste de courses automatique</p>
+              </div>
+            </div>
+            <button
+              :class="['settings__toggle', { 'settings__toggle--on': localShowGroceries }]"
+              :aria-checked="localShowGroceries"
+              role="switch"
+              aria-label="Activer le module Courses"
+              data-testid="groceries-toggle"
+              @click="localShowGroceries = !localShowGroceries"
+            >
+              <span class="settings__toggle-thumb" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mon foyer -->
+      <div class="settings__section">
+        <p class="settings__section-label">Mon foyer</p>
+
+        <div class="settings__card">
+          <!-- Portions -->
+          <div class="settings__row">
+            <div class="settings__row-left">
+              <div class="settings__icon-wrap">
+                <KuboIcon name="users" :size="18" />
+              </div>
+              <div>
+                <p class="settings__row-title">Portions</p>
+                <p class="settings__row-desc">Nombre de convives</p>
+              </div>
+            </div>
+            <div class="settings__stepper">
+              <button class="settings__step-btn" @click="changePortions(-1)">
+                <KuboIcon name="minus" :size="13" />
+              </button>
+              <span class="settings__step-val" data-testid="portions-value">{{ localPortions }}</span>
+              <button class="settings__step-btn" @click="changePortions(1)">
+                <KuboIcon name="plus" :size="13" />
+              </button>
+            </div>
+          </div>
+
+          <div class="settings__divider" />
+
+          <!-- Repas / semaine -->
+          <div class="settings__row">
+            <div class="settings__row-left">
+              <div class="settings__icon-wrap">
+                <KuboIcon name="calendar" :size="18" />
+              </div>
+              <div>
+                <p class="settings__row-title">Repas / semaine</p>
+                <p class="settings__row-desc">Objectif hebdomadaire</p>
+              </div>
+            </div>
+            <div class="settings__stepper">
+              <button class="settings__step-btn" @click="changeMealsGoal(-1)">
+                <KuboIcon name="minus" :size="13" />
+              </button>
+              <span class="settings__step-val" data-testid="meals-goal-value">{{ localMealsGoal }}</span>
+              <button class="settings__step-btn" @click="changeMealsGoal(1)">
+                <KuboIcon name="plus" :size="13" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Apparence -->
+      <div class="settings__section">
+        <p class="settings__section-label">Apparence</p>
+
+        <div class="settings__card">
+          <div class="settings__row">
+            <div class="settings__row-left">
+              <div :class="['settings__icon-wrap', darkMode ? 'settings__icon-wrap--ochre' : '']">
+                <KuboIcon :name="darkMode ? 'sun' : 'moon'" :size="18" />
+              </div>
+              <div>
+                <p class="settings__row-title">Mode sombre</p>
+                <p class="settings__row-desc">Style &amp; Confort nocturne</p>
+              </div>
+            </div>
+            <button
+              :class="['settings__toggle', { 'settings__toggle--on': darkMode }]"
+              :aria-checked="darkMode"
+              role="switch"
+              aria-label="Activer le mode sombre"
+              data-testid="darkmode-toggle"
+              @click="toggleDarkMode"
+            >
+              <span class="settings__toggle-thumb" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Save -->
+    <div class="settings__footer">
+      <button class="btn-sage" data-testid="settings-save-btn" @click="save">
+        <KuboIcon name="check" :size="14" />
+        Sauvegarder
+      </button>
+    </div>
+
   </div>
 </template>
 
 <style scoped>
 .settings {
-  padding: 48px;
-  max-width: 600px;
-  margin: 0 auto;
-}
-@media (max-width: 768px) {
-  .settings {
-    padding: 24px;
-  }
+  padding: 30px 36px 40px;
+  max-width: 680px;
 }
 
 .settings__header {
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
-.settings__title {
-  font-size: 36px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  color: var(--kubo-text);
+.settings__sub {
+  font-size: 14px;
+  color: var(--kubo-text-muted);
+  margin-top: 8px;
 }
 
-.settings__stack {
+/* Grid */
+.settings__grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
+
+.settings__section-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--kubo-text-faint);
+  padding: 0 4px;
+  margin-bottom: 10px;
+}
+
+/* Card */
 .settings__card {
-  padding: 28px !important;
+  background: var(--kubo-surface);
+  border: 1px solid var(--kubo-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
-.settings__card--row {
+
+.settings__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding: 18px 20px;
 }
-
-.settings__card-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--kubo-text);
-  margin-bottom: 20px;
-}
-.settings__card-icon {
-  color: var(--kubo-green);
-}
-
-/* Module cards */
-.settings__module-left {
+.settings__row-left {
   display: flex;
   align-items: center;
   gap: 14px;
 }
-.settings__module-icon-wrap {
-  width: 48px;
-  height: 48px;
-  background: var(--kubo-green-light);
+.settings__icon-wrap {
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
+  background: var(--kubo-surface-mute);
+  color: var(--kubo-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--kubo-green);
+  flex-shrink: 0;
 }
-.settings__module-title {
-  font-size: 16px;
-  font-weight: 800;
+.settings__icon-wrap--ochre {
+  background: var(--kubo-ochre-soft);
+  color: var(--kubo-ochre);
+}
+.settings__icon-wrap--blue {
+  background: var(--kubo-blue-soft);
+  color: var(--kubo-blue);
+}
+.settings__row-title {
+  font-size: 14px;
+  font-weight: 700;
   color: var(--kubo-text);
+  line-height: 1.3;
 }
-.settings__module-desc {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--kubo-text-muted);
+.settings__row-desc {
+  font-size: 12px;
+  color: var(--kubo-text-faint);
   margin-top: 2px;
 }
 
-/* Steppers */
-.settings__steppers {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.settings__divider {
+  height: 1px;
+  background: var(--kubo-border);
+  margin: 0 20px;
 }
+
+/* Toggle */
+.settings__toggle {
+  width: 48px;
+  height: 28px;
+  background: var(--kubo-surface-mute);
+  border: 1px solid var(--kubo-border);
+  border-radius: 99px;
+  cursor: pointer;
+  position: relative;
+  transition: background var(--transition-base), border-color var(--transition-base);
+  padding: 3px;
+  flex-shrink: 0;
+}
+.settings__toggle--on {
+  background: var(--kubo-green);
+  border-color: var(--kubo-green);
+}
+.settings__toggle-thumb {
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+  display: block;
+  transform: translateX(0);
+  transition: transform var(--transition-base);
+}
+.settings__toggle--on .settings__toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* Stepper */
 .settings__stepper {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--kubo-surface-mute);
-  border-radius: var(--radius-lg);
+  gap: 10px;
 }
-.settings__stepper-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--kubo-text);
-}
-.settings__stepper-ctrl {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.settings__stepper-btn {
-  width: 32px;
-  height: 32px;
+.settings__step-btn {
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--kubo-border);
-  background: var(--kubo-surface);
+  background: var(--kubo-surface-mute);
   border-radius: var(--radius-sm);
   color: var(--kubo-text-muted);
   display: flex;
@@ -314,78 +356,38 @@ function save(): void {
   cursor: pointer;
   transition: all var(--transition-base);
 }
-.settings__stepper-btn:hover {
+.settings__step-btn:hover {
   border-color: var(--kubo-green);
   color: var(--kubo-green);
 }
-.settings__stepper-value {
-  font-size: 16px;
-  font-weight: 900;
+.settings__step-val {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 22px;
   color: var(--kubo-text);
-  min-width: 24px;
+  min-width: 28px;
   text-align: center;
 }
 
-/* Dark toggle */
-.settings__dark-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.settings__dark-icon-wrap {
-  width: 48px;
-  height: 48px;
-  background: var(--kubo-surface-mute);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--kubo-green);
-}
-.settings__dark-title {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--kubo-text);
-}
-.settings__dark-sub {
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--kubo-text-muted);
-  margin-top: 2px;
-}
-
-.settings__toggle {
-  width: 52px;
-  height: 30px;
-  background: var(--kubo-surface-mute);
-  border: none;
-  border-radius: 99px;
-  cursor: pointer;
-  position: relative;
-  transition: background var(--transition-base);
-  padding: 3px;
-  flex-shrink: 0;
-}
-.settings__toggle--on {
-  background: var(--kubo-green);
-}
-.settings__toggle-thumb {
-  width: 24px;
-  height: 24px;
-  background: #fff;
-  border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  display: block;
-  transform: translateX(0);
-  transition: transform var(--transition-base);
-}
-.settings__toggle--on .settings__toggle-thumb {
-  transform: translateX(22px);
-}
-
-.settings__save {
+/* Footer */
+.settings__footer {
   margin-top: 24px;
 }
+.btn-sage {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  background: var(--kubo-green);
+  color: #fffdf7;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-base);
+  transition: filter var(--transition-base);
+}
+.btn-sage:hover { filter: brightness(1.08); }
 </style>

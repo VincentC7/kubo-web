@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/**
- * GroceriesView — Vue liste de courses
- */
 import { onMounted, ref, computed } from 'vue'
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { storeToRefs } from 'pinia'
@@ -14,20 +11,26 @@ const planningStore = usePlanningStore()
 const uiStore = useUiStore()
 const { list, loading, itemsByCategory, checkedCount, totalCount } = storeToRefs(shoppingStore)
 
-// Set des IDs d'items en cours de toggle (feedback visuel)
 const togglingIds = ref<Set<string>>(new Set())
-// Set des IDs d'items fraîchement cochés (flash vert)
-const flashedIds = ref<Set<string>>(new Set())
-// Tout cocher en cours
+const flashedIds  = ref<Set<string>>(new Set())
 const checkingAll = ref(false)
-// Tous cochés ?
-const allChecked = computed(() => totalCount.value > 0 && checkedCount.value === totalCount.value)
+const allChecked  = computed(() => totalCount.value > 0 && checkedCount.value === totalCount.value)
+
+const CATEGORY_META: Record<string, { emoji: string; tone: string }> = {
+  'Féculent':      { emoji: '🌾', tone: 'ochre' },
+  'Légume':        { emoji: '🥬', tone: 'sage' },
+  'Frais':         { emoji: '🥚', tone: 'blue' },
+  'Herbe / Épice': { emoji: '🌿', tone: 'sage' },
+  'Conserve':      { emoji: '🥫', tone: 'tomato' },
+}
+
+function categoryMeta(cat: string) {
+  return CATEGORY_META[cat] ?? { emoji: '🛒', tone: 'mute' }
+}
 
 onMounted(async () => {
   await shoppingStore.fetchList()
-  if (!list.value) {
-    await shoppingStore.generate()
-  }
+  if (!list.value) await shoppingStore.generate()
 })
 
 async function handleToggle(id: string) {
@@ -35,16 +38,21 @@ async function handleToggle(id: string) {
   await shoppingStore.toggleItem(id)
   togglingIds.value.delete(id)
   togglingIds.value = new Set(togglingIds.value)
-
-  // Flash vert pendant 600ms sur l'item qui vient d'être coché
   const item = list.value?.items.find((i) => i.id === id)
   if (item?.checked) {
     flashedIds.value = new Set(flashedIds.value).add(id)
-    setTimeout(() => {
-      flashedIds.value.delete(id)
-      flashedIds.value = new Set(flashedIds.value)
-    }, 600)
+    setTimeout(() => { flashedIds.value.delete(id); flashedIds.value = new Set(flashedIds.value) }, 600)
   }
+}
+
+async function handleCheckAll() {
+  checkingAll.value = true
+  const uncheckedIds = list.value?.items.filter((i) => !i.checked).map((i) => i.id) ?? []
+  await shoppingStore.checkAll()
+  uncheckedIds.forEach((id) => { flashedIds.value = new Set(flashedIds.value).add(id) })
+  setTimeout(() => { uncheckedIds.forEach((id) => flashedIds.value.delete(id)); flashedIds.value = new Set(flashedIds.value) }, 600)
+  checkingAll.value = false
+  uiStore.notify('Toutes les courses cochées !')
 }
 
 async function handleUncheckAll() {
@@ -54,429 +62,427 @@ async function handleUncheckAll() {
   checkingAll.value = false
 }
 
-async function handleCheckAll() {
-  checkingAll.value = true
-  // Flash tous les items non cochés
-  const uncheckedIds = list.value?.items.filter((i) => !i.checked).map((i) => i.id) ?? []
-  await shoppingStore.checkAll()
-  // Flash vert sur tous
-  uncheckedIds.forEach((id) => {
-    flashedIds.value = new Set(flashedIds.value).add(id)
-  })
-  setTimeout(() => {
-    uncheckedIds.forEach((id) => flashedIds.value.delete(id))
-    flashedIds.value = new Set(flashedIds.value)
-  }, 600)
-  checkingAll.value = false
-  uiStore.notify('Toutes les courses cochées !')
-}
+const progressPct = computed(() => totalCount.value > 0 ? Math.round((checkedCount.value / totalCount.value) * 100) : 0)
 
-function goToPlanning() {
-  uiStore.navTo('planning')
-}
+// mock estimated budget
+const estimatedBudget = computed(() => (totalCount.value * 2.35).toFixed(2))
 </script>
 
 <template>
   <div class="groceries fade-in" data-testid="groceries-view">
-    <header class="groceries__header">
-      <div>
-        <h1 class="groceries__title">Courses</h1>
-        <p class="groceries__sub">{{ planningStore.weekRange }}</p>
-      </div>
 
-      <div class="groceries__actions">
-        <!-- Progression -->
-        <div v-if="totalCount > 0" class="groceries__progress-badge">
-          <KuboIcon name="list-checks" :size="15" />
-          <span>{{ checkedCount }}/{{ totalCount }}</span>
-          <!-- Barre de progression -->
-          <div class="groceries__progress-track">
-            <div
-              class="groceries__progress-fill"
-              :style="{ width: totalCount ? `${(checkedCount / totalCount) * 100}%` : '0%' }"
-            />
-          </div>
-        </div>
+    <!-- Header -->
+    <div class="groceries__header">
+      <div>
+        <h1 class="kb-h1">Liste <span class="roman">de courses.</span></h1>
+        <p class="groceries__sub">{{ totalCount }} articles · auto-générée depuis votre menu {{ planningStore.weekRange }}.</p>
+      </div>
+      <div class="groceries__header-actions">
+        <button class="btn-ghost-line" @click="shoppingStore.generate()">
+          <KuboIcon name="refresh-cw" :size="13" />Régénérer
+        </button>
         <button
-          v-if="totalCount > 0"
-          class="groceries__check-all-btn"
-          :class="{ 'groceries__check-all-btn--done': allChecked }"
+          class="btn-sage"
           :disabled="checkingAll"
           @click="allChecked ? handleUncheckAll() : handleCheckAll()"
         >
-          <span v-if="checkingAll" class="groceries__btn-spinner" />
-          <KuboIcon v-else :name="allChecked ? 'circle-x' : 'list-checks'" :size="14" />
+          <span v-if="checkingAll" class="spinner-white" />
+          <KuboIcon v-else :name="allChecked ? 'x' : 'check'" :size="13" />
           {{ allChecked ? 'Tout décocher' : 'Tout cocher' }}
         </button>
       </div>
-    </header>
-
-    <!-- Liste par catégorie -->
-    <div v-if="list && totalCount > 0" class="groceries__list">
-      <div v-for="(items, category) in itemsByCategory" :key="category" class="groceries__category">
-        <h2 class="groceries__category-title">{{ category }}</h2>
-        <ul class="groceries__items">
-          <li
-            v-for="item in items"
-            :key="item.id"
-            :class="[
-              'groceries__item',
-              { 'groceries__item--checked': item.checked },
-              { 'groceries__item--toggling': togglingIds.has(item.id) },
-              { 'groceries__item--flash': flashedIds.has(item.id) },
-            ]"
-          >
-            <button
-              class="groceries__item-check"
-              :aria-label="item.checked ? 'Décocher' : 'Cocher'"
-              :disabled="togglingIds.has(item.id)"
-              @click="handleToggle(item.id)"
-            >
-              <span v-if="togglingIds.has(item.id)" class="groceries__check-spinner" />
-              <KuboIcon v-else :name="item.checked ? 'check' : 'plus'" :size="14" />
-            </button>
-            <span class="groceries__item-name">{{ item.ingredientName }}</span>
-            <span v-if="item.quantity || item.unit" class="groceries__item-qty">
-              {{ [item.quantity, item.unit].filter(Boolean).join(' ') }}
-            </span>
-            <button
-              class="groceries__item-remove"
-              aria-label="Supprimer"
-              @click="shoppingStore.removeItem(item.id)"
-            >
-              <KuboIcon name="x" :size="13" />
-            </button>
-          </li>
-        </ul>
-      </div>
     </div>
 
-    <!-- État vide -->
-    <div v-else-if="!loading" class="groceries__empty">
-      <div class="groceries__empty-icon">
-        <KuboIcon name="shopping-cart" :size="32" />
+    <!-- Bento header -->
+    <div v-if="totalCount > 0" class="groceries__bento-header">
+      <!-- Progression — sauge -->
+      <div class="bento-card bento-sage bento-col-5">
+        <div class="kb-eyebrow" style="color: rgba(255,253,247,.65)">Progression</div>
+        <div class="groceries__prog-body">
+          <span class="groceries__prog-num">{{ checkedCount }}</span>
+          <span class="groceries__prog-total">/ {{ totalCount }}</span>
+          <span class="groceries__prog-pct">{{ progressPct }}%</span>
+        </div>
+        <div class="bento-progress-track">
+          <div class="bento-progress-fill" :style="{ width: progressPct + '%' }" />
+        </div>
+        <div style="font-size: 12.5px; opacity: .9; margin-top: 10px;">
+          Plus que <b>{{ totalCount - checkedCount }}</b> article{{ totalCount - checkedCount > 1 ? 's' : '' }} à attraper.
+        </div>
       </div>
-      <p class="groceries__empty-title">Aucun ingrédient cette semaine</p>
-      <p class="groceries__empty-hint">
-        Ajoutez des recettes à votre menu pour générer automatiquement votre liste de courses.
-      </p>
-      <button class="groceries__empty-cta" @click="goToPlanning">
-        <KuboIcon name="calendar" :size="15" />
-        Aller au planning
-      </button>
+
+      <!-- Budget estimé — tomate -->
+      <div class="bento-card bento-tomato bento-col-4">
+        <div class="kb-eyebrow" style="color: var(--kubo-tomato-deep)">Estimé · semaine</div>
+        <div class="groceries__budget-num">{{ estimatedBudget }}<span class="groceries__budget-unit">€</span></div>
+        <div style="font-size: 11.5px; color: var(--kubo-text-muted); margin-top: 8px; line-height: 1.5;">
+          Basé sur les prix observés.
+        </div>
+      </div>
+
+      <!-- Par rayon -->
+      <div class="bento-card bento-col-3">
+        <div class="kb-eyebrow">Par rayon</div>
+        <div class="groceries__rayon-list">
+          <div
+            v-for="([cat, items]) in Object.entries(itemsByCategory)"
+            :key="cat"
+            class="groceries__rayon-row"
+          >
+            <span class="groceries__rayon-emoji">{{ categoryMeta(cat).emoji }}</span>
+            <span class="groceries__rayon-name">{{ cat }}</span>
+            <span class="groceries__rayon-count">{{ items.filter(i => i.checked).length }}/{{ items.length }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Loading -->
     <div v-if="loading" class="groceries__loading">
-      <span class="groceries__spinner" />
+      <span class="spinner-sage" />
+    </div>
+
+    <!-- Empty state -->
+    <div v-else-if="!list || totalCount === 0" class="groceries__empty">
+      <div class="groceries__empty-icon">
+        <KuboIcon name="shopping-cart" :size="32" />
+      </div>
+      <p class="groceries__empty-title">Aucun article cette semaine</p>
+      <p class="groceries__empty-hint">Ajoutez des recettes à votre menu pour générer automatiquement votre liste.</p>
+      <button class="btn-sage" style="margin-top: 8px;" @click="uiStore.navTo('planning')">
+        <KuboIcon name="calendar" :size="14" />Aller au planning
+      </button>
+    </div>
+
+    <!-- Category grid -->
+    <div v-else class="groceries__grid">
+      <div
+        v-for="([cat, items]) in Object.entries(itemsByCategory)"
+        :key="cat"
+        class="bento-card groceries__category-card"
+      >
+        <!-- Category header -->
+        <div class="groceries__cat-header">
+          <div class="groceries__cat-icon" :class="`groceries__cat-icon--${categoryMeta(cat).tone}`">
+            {{ categoryMeta(cat).emoji }}
+          </div>
+          <span class="groceries__cat-title">{{ cat }}</span>
+          <span class="groceries__cat-count">{{ items.filter(i => i.checked).length }}/{{ items.length }}</span>
+        </div>
+
+        <!-- Items -->
+        <div
+          v-for="item in items"
+          :key="item.id"
+          :class="[
+            'groceries__item',
+            { 'groceries__item--checked': item.checked },
+            { 'groceries__item--flash': flashedIds.has(item.id) },
+          ]"
+        >
+          <button
+            class="groceries__check"
+            :class="{ 'groceries__check--on': item.checked }"
+            :disabled="togglingIds.has(item.id)"
+            @click="handleToggle(item.id)"
+          >
+            <span v-if="togglingIds.has(item.id)" class="spinner-xs" />
+            <KuboIcon v-else-if="item.checked" name="check" :size="13" />
+          </button>
+          <span class="groceries__item-name">{{ item.ingredientName }}</span>
+          <span v-if="item.quantity || item.unit" class="groceries__item-qty">
+            {{ [item.quantity, item.unit].filter(Boolean).join(' ') }}
+          </span>
+          <button class="groceries__item-remove" @click="shoppingStore.removeItem(item.id)">
+            <KuboIcon name="x" :size="12" />
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .groceries {
-  padding: 48px;
-  max-width: 960px;
-  margin: 0 auto;
-}
-@media (max-width: 768px) {
-  .groceries {
-    padding: 24px;
-  }
+  padding: 30px 36px 40px;
 }
 
 .groceries__header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: flex-end;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 32px;
-}
-.groceries__title {
-  font-size: 36px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  color: var(--kubo-text);
+  gap: 12px;
+  margin-bottom: 22px;
 }
 .groceries__sub {
   font-size: 14px;
-  font-weight: 600;
   color: var(--kubo-text-muted);
-  margin-top: 4px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.groceries__header-actions {
+  display: flex;
+  gap: 10px;
 }
 
-.groceries__actions {
+/* Buttons */
+.btn-sage {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: var(--kubo-green); color: #fffdf7;
+  border: none; border-radius: var(--radius-pill);
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font-base);
+  transition: filter var(--transition-base);
+}
+.btn-sage:hover { filter: brightness(1.08); }
+.btn-sage:disabled { opacity: .6; cursor: not-allowed; filter: none; }
+
+.btn-ghost-line {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: transparent; color: var(--kubo-text);
+  border: 1px solid var(--kubo-border); border-radius: var(--radius-pill);
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font-base);
+}
+.btn-ghost-line:hover { border-color: var(--kubo-text-muted); }
+
+/* Bento header */
+.groceries__bento-header {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.bento-card {
+  background: var(--kubo-surface);
+  border: 1px solid var(--kubo-border);
+  border-radius: var(--radius-xl);
+  padding: 22px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+}
+.bento-col-3 { grid-column: span 3; }
+.bento-col-4 { grid-column: span 4; }
+.bento-col-5 { grid-column: span 5; }
+
+.bento-sage   { background: var(--kubo-green); color: #fffdf7; border-color: transparent; }
+.bento-tomato { background: var(--kubo-tomato-soft); border-color: transparent; }
+
+.bento-progress-track {
+  height: 6px; background: rgba(255,253,247,.2); border-radius: 3px; margin-top: 14px;
+}
+.bento-progress-fill {
+  height: 100%; background: var(--kubo-tomato); border-radius: 3px; transition: width .4s ease;
+}
+
+/* Progression */
+.groceries__prog-body {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+}
+.groceries__prog-num {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 64px;
+  letter-spacing: -2.5px;
+  line-height: 1;
+}
+.groceries__prog-total {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 26px;
+  opacity: .55;
+}
+.groceries__prog-pct {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kubo-tomato-deep);
+  background: #fffdf7;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+}
+
+/* Budget */
+.groceries__budget-num {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 52px;
+  letter-spacing: -2px;
+  color: var(--kubo-text);
+  line-height: 1;
+  margin-top: 8px;
+}
+.groceries__budget-unit {
+  font-style: normal;
+  font-size: 22px;
+  opacity: .5;
+  margin-left: 4px;
+}
+
+/* Rayon list */
+.groceries__rayon-list { margin-top: 10px; display: flex; flex-direction: column; }
+.groceries__rayon-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  font-size: 11px;
+  border-top: 1px dashed var(--kubo-border);
+}
+.groceries__rayon-row:first-child { border-top: none; }
+.groceries__rayon-emoji { font-size: 13px; }
+.groceries__rayon-name { flex: 1; font-weight: 700; color: var(--kubo-text); }
+.groceries__rayon-count { font-family: var(--font-mono); color: var(--kubo-green); font-weight: 700; }
+
+/* Category grid */
+.groceries__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding-bottom: 40px;
+}
+
+.groceries__category-card { padding: 20px; }
+
+.groceries__cat-header {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--kubo-border);
 }
-
-/* Badge progression avec barre */
-.groceries__progress-badge {
+.groceries__cat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--kubo-surface);
-  border: 1px solid var(--kubo-border);
-  border-radius: var(--radius-xl);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--kubo-text-muted);
-}
-.groceries__progress-track {
-  width: 60px;
-  height: 4px;
-  background: var(--kubo-surface-mute);
-  border-radius: 99px;
-  overflow: hidden;
-}
-.groceries__progress-fill {
-  height: 100%;
-  background: var(--kubo-green);
-  border-radius: 99px;
-  transition: width 0.4s ease;
-}
-
-.groceries__check-all-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: var(--kubo-green);
-  color: #fff;
-  border: 1.5px solid transparent;
-  border-radius: var(--radius-xl);
-  font-size: 13px;
-  font-weight: 700;
-  font-family: var(--font-base);
-  cursor: pointer;
-  transition:
-    opacity var(--transition-base),
-    background var(--transition-base),
-    color var(--transition-base),
-    border-color var(--transition-base);
-}
-.groceries__check-all-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-.groceries__check-all-btn--done {
-  background: transparent;
-  color: var(--kubo-text);
-  border-color: var(--kubo-border);
-}
-.groceries__check-all-btn--done:not(:disabled):hover {
-  border-color: var(--kubo-text-muted);
-}
-.groceries__check-all-btn:not(:disabled):not(.groceries__check-all-btn--done):hover {
-  opacity: 0.88;
-}
-
-.groceries__btn-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+  justify-content: center;
+  font-size: 18px;
   flex-shrink: 0;
 }
+.groceries__cat-icon--sage   { background: var(--kubo-green-light); }
+.groceries__cat-icon--tomato { background: var(--kubo-tomato-soft); }
+.groceries__cat-icon--ochre  { background: var(--kubo-ochre-soft); }
+.groceries__cat-icon--blue   { background: var(--kubo-blue-soft); }
+.groceries__cat-icon--mute   { background: var(--kubo-surface-mute); }
 
-.groceries__list {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  padding-bottom: 48px;
+.groceries__cat-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: -0.3px;
+  flex: 1;
+  color: var(--kubo-text);
 }
-
-.groceries__category-title {
+.groceries__cat-count {
+  font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--kubo-text-muted);
-  margin-bottom: 10px;
+  color: var(--kubo-text-faint);
+  font-weight: 700;
 }
 
-.groceries__items {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
+/* Items */
 .groceries__item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: var(--kubo-surface);
-  border: 1px solid var(--kubo-border);
-  border-radius: var(--radius-lg);
-  transition:
-    opacity var(--transition-base),
-    border-color var(--transition-base),
-    background var(--transition-base);
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid transparent;
+  transition: opacity var(--transition-base);
 }
-.groceries__item--checked {
-  opacity: 0.5;
-}
-.groceries__item--checked .groceries__item-name {
-  text-decoration: line-through;
-}
-.groceries__item--toggling {
-  opacity: 0.7;
-}
-/* Flash vert bref au cochage */
-.groceries__item--flash {
-  border-color: var(--kubo-green);
-  background: var(--kubo-green-light);
-}
+.groceries__item + .groceries__item { border-top-color: var(--kubo-border); }
+.groceries__item--checked { opacity: .5; }
+.groceries__item--checked .groceries__item-name { text-decoration: line-through; }
+.groceries__item--flash { background: var(--kubo-green-light); border-radius: var(--radius-sm); padding-left: 8px; padding-right: 8px; }
 
-.groceries__item-check {
+.groceries__check {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1.5px solid var(--kubo-border-mid);
+  background: var(--kubo-surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid var(--kubo-border);
-  background: transparent;
   cursor: pointer;
   flex-shrink: 0;
-  color: var(--kubo-green);
-  transition:
-    border-color var(--transition-base),
-    background var(--transition-base);
+  transition: all var(--transition-base);
 }
-.groceries__item-check:disabled {
-  cursor: wait;
-}
-.groceries__item--checked .groceries__item-check {
-  background: var(--kubo-green);
-  border-color: var(--kubo-green);
-  color: #fff;
-}
-
-.groceries__check-spinner {
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--kubo-border);
-  border-top-color: var(--kubo-green);
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
+.groceries__check:hover { border-color: var(--kubo-green); }
+.groceries__check--on { background: var(--kubo-green); border-color: var(--kubo-green); color: #fff; }
+.groceries__check:disabled { cursor: wait; }
 
 .groceries__item-name {
   flex: 1;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--kubo-text);
 }
-
 .groceries__item-qty {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
   color: var(--kubo-text-muted);
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
-
 .groceries__item-remove {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--kubo-text-faint);
+  cursor: pointer;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--kubo-text-muted);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  opacity: 0.35;
-  transition:
-    opacity var(--transition-base),
-    background var(--transition-base);
+  opacity: .4;
+  transition: opacity var(--transition-base), color var(--transition-base);
 }
-.groceries__item-remove:hover {
-  opacity: 1;
-  background: #fef2f2;
-  color: #ef4444;
-}
+.groceries__item-remove:hover { opacity: 1; color: var(--kubo-tomato-deep); }
 
-/* Empty state */
+/* Empty */
 .groceries__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 80px 24px;
+  gap: 14px;
+  padding: 60px 24px;
   text-align: center;
 }
 .groceries__empty-icon {
-  width: 80px;
-  height: 80px;
+  width: 80px; height: 80px;
   background: var(--kubo-surface-mute);
   border-radius: var(--radius-2xl);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   color: var(--kubo-text-muted);
 }
-.groceries__empty-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--kubo-text);
-}
-.groceries__empty-hint {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--kubo-text-muted);
-  max-width: 360px;
-  line-height: 1.6;
-}
-.groceries__empty-cta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 28px;
-  background: var(--kubo-green);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-xl);
-  font-size: 14px;
-  font-weight: 700;
-  font-family: var(--font-base);
-  cursor: pointer;
-  margin-top: 8px;
-  transition:
-    opacity var(--transition-base),
-    transform var(--transition-bounce);
-}
-.groceries__empty-cta:hover {
-  opacity: 0.88;
-  transform: scale(1.02);
-}
+.groceries__empty-title { font-size: 20px; font-weight: 700; color: var(--kubo-text); }
+.groceries__empty-hint { font-size: 14px; color: var(--kubo-text-muted); max-width: 360px; line-height: 1.6; }
 
-/* Loading */
-.groceries__loading {
-  display: flex;
-  justify-content: center;
-  padding: 40px 0;
-}
-.groceries__spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid var(--kubo-border);
-  border-top-color: var(--kubo-green);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* Spinners */
+.spinner-white { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+.spinner-sage  { width: 28px; height: 28px; border: 3px solid var(--kubo-border); border-top-color: var(--kubo-green); border-radius: 50%; animation: spin .7s linear infinite; }
+.spinner-xs    { width: 12px; height: 12px; border: 2px solid var(--kubo-border); border-top-color: var(--kubo-green); border-radius: 50%; animation: spin .6s linear infinite; }
+.groceries__loading { display: flex; justify-content: center; padding: 40px 0; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 800px) {
+  .groceries__bento-header { grid-template-columns: repeat(6, 1fr); }
+  .bento-col-5 { grid-column: span 6; }
+  .bento-col-4 { grid-column: span 6; }
+  .bento-col-3 { grid-column: span 6; }
+  .groceries__grid { grid-template-columns: 1fr; }
 }
 </style>

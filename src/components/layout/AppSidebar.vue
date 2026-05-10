@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * AppSidebar — Navigation principale
- * Chaque lien est filtré par useFeatureAccess().
- * Le bloc user en bas ouvre le profil si connecté, le login sinon.
- */
 import KuboIcon from '@/components/ui/KuboIcon.vue'
 import { emailToHue } from '@/utils/avatar'
 import { storeToRefs } from 'pinia'
@@ -33,12 +28,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  {
-    id: 'dashboard',
-    label: 'Tableau de bord',
-    icon: 'layout-dashboard',
-    feature: 'nav:link:dashboard',
-  },
+  { id: 'dashboard', label: 'Synthèse', icon: 'layout-dashboard', feature: 'nav:link:dashboard' },
   { id: 'catalog', label: 'Recettes', icon: 'utensils', feature: 'nav:link:catalog' },
   { id: 'planning', label: 'Menu Hebdo', icon: 'calendar', feature: 'nav:link:planning' },
   { id: 'groceries', label: 'Courses', icon: 'shopping-cart', feature: 'nav:link:groceries' },
@@ -52,17 +42,13 @@ function isNavVisible(item: NavItem): boolean {
   return true
 }
 
-// User section
 const userInitials = computed(() => {
   if (user.value?.firstName && user.value?.lastName) {
     return (user.value.firstName[0] + user.value.lastName[0]).toUpperCase()
   }
   if (!user.value?.email) return '?'
   const parts = user.value.email.split('@')[0].split(/[._-]/)
-  return parts
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('')
+  return parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('')
 })
 
 const userLabel = computed(() => {
@@ -92,25 +78,34 @@ function handleUserClick(): void {
 
 <template>
   <aside :class="['sidebar', { 'sidebar--collapsed': sidebarCollapsed }]" data-testid="sidebar">
-    <!-- Logo + toggle -->
+    <!-- Brand -->
     <div class="sidebar__top">
-      <div class="sidebar__brand">
-        <div class="sidebar__logo">
-          <span class="sidebar__logo-k">K</span>
-        </div>
-        <span v-show="!sidebarCollapsed" class="sidebar__name">kubo</span>
-      </div>
+      <button class="sidebar__brand" @click="navTo('dashboard')">
+        <div class="sidebar__mark">k</div>
+        <span v-show="!sidebarCollapsed" class="sidebar__wordmark">kubo</span>
+      </button>
       <button
+        v-show="!sidebarCollapsed"
         class="sidebar__toggle"
         title="Réduire"
         data-testid="sidebar-toggle"
         @click="toggleSidebar"
       >
-        <KuboIcon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" :size="18" />
+        <KuboIcon name="chevron-left" :size="16" />
+      </button>
+      <button
+        v-show="sidebarCollapsed"
+        class="sidebar__toggle"
+        title="Étendre"
+        data-testid="sidebar-toggle"
+        @click="toggleSidebar"
+      >
+        <KuboIcon name="chevron-right" :size="16" />
       </button>
     </div>
 
-    <!-- Navigation -->
+    <!-- Section Cuisine -->
+    <p v-show="!sidebarCollapsed" class="sidebar__section-label">Cuisine</p>
     <nav class="sidebar__nav" data-testid="sidebar-nav">
       <button
         v-for="item in NAV_ITEMS"
@@ -121,12 +116,24 @@ function handleUserClick(): void {
         :data-testid="`nav-${item.id}`"
         @click="navTo(item.id)"
       >
-        <KuboIcon :name="item.icon" :size="20" />
+        <KuboIcon :name="item.icon" :size="17" />
         <span v-show="!sidebarCollapsed" class="sidebar__label">{{ item.label }}</span>
       </button>
+    </nav>
 
-      <div class="sidebar__divider" />
-
+    <!-- Section Compte -->
+    <p v-show="!sidebarCollapsed && (isAuthenticated || can('nav:link:settings'))" class="sidebar__section-label sidebar__section-label--mt">Compte</p>
+    <nav class="sidebar__nav">
+      <button
+        v-if="isAuthenticated"
+        :class="['sidebar__item', { 'sidebar__item--active': currentView === 'profile' }]"
+        :title="sidebarCollapsed ? 'Mon profil' : undefined"
+        data-testid="nav-profile"
+        @click="navTo('profile')"
+      >
+        <KuboIcon name="user" :size="17" />
+        <span v-show="!sidebarCollapsed" class="sidebar__label">Mon profil</span>
+      </button>
       <button
         v-if="can('nav:link:settings')"
         :class="['sidebar__item', { 'sidebar__item--active': currentView === 'settings' }]"
@@ -134,7 +141,7 @@ function handleUserClick(): void {
         data-testid="nav-settings"
         @click="navTo('settings')"
       >
-        <KuboIcon name="settings" :size="20" />
+        <KuboIcon name="settings" :size="17" />
         <span v-show="!sidebarCollapsed" class="sidebar__label">Paramètres</span>
       </button>
     </nav>
@@ -153,15 +160,16 @@ function handleUserClick(): void {
         <p class="sidebar__user-name">{{ userLabel }}</p>
         <p class="sidebar__user-email">{{ user?.email }}</p>
       </div>
-      <KuboIcon
+      <button
         v-show="!sidebarCollapsed"
-        name="chevron-right"
-        :size="14"
-        class="sidebar__user-chevron"
-      />
+        class="sidebar__user-logout"
+        title="Déconnexion"
+        @click.stop="authStore.logout()"
+      >
+        <KuboIcon name="log-out" :size="13" />
+      </button>
     </button>
 
-    <!-- Bouton Se connecter (visiteur) -->
     <button
       v-else
       class="sidebar__login-btn"
@@ -178,98 +186,126 @@ function handleUserClick(): void {
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 280px;
+  width: 232px;
   background: var(--kubo-surface);
   border-right: 1px solid var(--kubo-border);
-  padding: 24px 20px;
+  padding: 22px 14px 14px;
   z-index: 50;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  gap: 8px;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 1px;
   flex-shrink: 0;
 }
 .sidebar--collapsed {
-  width: 88px;
+  width: 72px;
 }
 
-/* Top */
+/* Brand */
 .sidebar__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  padding: 4px 8px 22px;
+  gap: 8px;
 }
 .sidebar__brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 11px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
   overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
-.sidebar__logo {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-lg);
+.sidebar--collapsed .sidebar__brand {
+  justify-content: center;
+}
+.sidebar__mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
   background: var(--kubo-green);
+  color: var(--kubo-surface);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 22px;
   flex-shrink: 0;
   box-shadow: 0 4px 12px var(--kubo-green-shadow);
 }
-.sidebar__logo-k {
-  color: #fff;
-  font-weight: 900;
-  font-size: 22px;
-  line-height: 1;
-}
-.sidebar__name {
+.sidebar__wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-style: italic;
   font-size: 26px;
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  color: var(--kubo-green);
+  letter-spacing: -0.5px;
+  color: var(--kubo-sage-deep);
+  line-height: 1;
   white-space: nowrap;
 }
+.dark .sidebar__wordmark {
+  color: var(--kubo-sage-deep);
+}
 .sidebar__toggle {
-  padding: 8px;
+  padding: 6px;
   border: none;
   background: transparent;
-  color: var(--kubo-text-muted);
-  border-radius: var(--radius-sm);
+  color: var(--kubo-text-faint);
+  border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: all var(--transition-base);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-base);
 }
 .sidebar__toggle:hover {
-  background: var(--kubo-surface-mute);
   color: var(--kubo-green);
+}
+
+/* Section labels */
+.sidebar__section-label {
+  padding: 12px 10px 6px;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--kubo-text-faint);
+  font-weight: 700;
+}
+.sidebar__section-label--mt {
+  margin-top: 8px;
 }
 
 /* Nav */
 .sidebar__nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 1;
+  gap: 1px;
 }
 .sidebar__item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
+  gap: 12px;
+  padding: 10px 12px;
   border: none;
   background: transparent;
   color: var(--kubo-text-muted);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   cursor: pointer;
   font-family: var(--font-base);
-  font-weight: 800;
-  font-size: 13px;
-  transition: all var(--transition-base);
+  font-weight: 600;
+  font-size: 13.5px;
+  transition: background var(--transition-base), color var(--transition-base);
   white-space: nowrap;
   overflow: hidden;
 }
 .sidebar--collapsed .sidebar__item {
   justify-content: center;
-  padding: 14px;
+  padding: 12px;
 }
 .sidebar__item:hover {
   background: var(--kubo-surface-mute);
@@ -277,50 +313,47 @@ function handleUserClick(): void {
 }
 .sidebar__item--active {
   background: var(--kubo-green) !important;
-  color: #fff !important;
-  box-shadow: 0 8px 20px -4px var(--kubo-green-shadow);
+  color: #fffdf7 !important;
 }
 .sidebar__label {
   white-space: nowrap;
 }
-.sidebar__divider {
-  height: 1px;
-  background: var(--kubo-border);
-  margin: 8px 0;
-}
 
-/* User connecté */
+/* User */
 .sidebar__user {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--kubo-surface-mute);
-  border: 1px solid var(--kubo-border);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
+  gap: 10px;
+  padding: 12px 10px;
+  border-top: 1px solid var(--kubo-border);
   margin-top: auto;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: background var(--transition-base);
   width: 100%;
   text-align: left;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  padding-top: 14px;
 }
 .sidebar__user:hover {
-  border-color: var(--kubo-green);
-  background: rgba(16, 185, 129, 0.06);
+  background: var(--kubo-surface-mute);
 }
 .sidebar--collapsed .sidebar__user {
   justify-content: center;
 }
 .sidebar__avatar {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
+  background: var(--kubo-green-light);
+  color: var(--kubo-sage-deep);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 900;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 13px;
   flex-shrink: 0;
 }
 .sidebar__user-info {
@@ -329,51 +362,66 @@ function handleUserClick(): void {
   min-width: 0;
 }
 .sidebar__user-name {
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 12.5px;
+  font-weight: 700;
   color: var(--kubo-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 .sidebar__user-email {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--kubo-text-muted);
+  font-size: 11px;
+  color: var(--kubo-text-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
+  margin-top: 1px;
 }
-.sidebar__user-chevron {
-  color: var(--kubo-text-faint);
+.sidebar__user-logout {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--kubo-border);
+  color: var(--kubo-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   flex-shrink: 0;
+  transition: all var(--transition-base);
+}
+.sidebar__user-logout:hover {
+  background: var(--kubo-tomato-soft);
+  border-color: var(--kubo-tomato);
+  color: var(--kubo-tomato-deep);
 }
 
-/* Bouton Se connecter (visiteur) */
+/* Login btn */
 .sidebar__login-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
   gap: 10px;
   margin-top: auto;
   padding: 12px 16px;
   width: 100%;
   background: var(--kubo-green);
-  color: #fff;
+  color: #fffdf7;
   border: none;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-pill);
   font-family: var(--font-base);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
-  transition: opacity var(--transition-base);
-  box-shadow: 0 4px 16px var(--kubo-green-shadow);
+  transition: filter var(--transition-base);
   white-space: nowrap;
   overflow: hidden;
 }
 .sidebar__login-btn:hover {
-  opacity: 0.9;
+  filter: brightness(1.08);
 }
 .sidebar--collapsed .sidebar__login-btn {
   padding: 12px;

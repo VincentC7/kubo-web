@@ -143,9 +143,12 @@ const imgError = ref(false)
 }
 
 .recipe-card__title {
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.25;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
   color: var(--kubo-text);
   transition: color var(--transition-base);
 }

@@ -1,82 +1,122 @@
 /* =========================================
-   KUBO — Design System Tokens
+   KUBO — Bento Frais Design System
    ========================================= */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,600;9..144,0,800;9..144,1,400;9..144,1,600;9..144,1,800&family=JetBrains+Mono:wght@400;600&display=swap');
 
 /* ---- Palette ---- */
 :root {
-  /* Brand */
-  --kubo-green: #00a35e;
-  --kubo-green-dark: #008a4f;
-  --kubo-green-light: #e6f7f0;
-  --kubo-green-shadow: rgba(0, 163, 94, 0.2);
+  /* Sauge (accent principal) */
+  --kubo-green: #4a7c59;
+  --kubo-green-dark: #2f5a3e;
+  --kubo-green-light: #d8e4d4;
+  --kubo-green-shadow: rgba(74, 124, 89, 0.14);
+  --kubo-sage-deep: #234433;
+  --kubo-sage-soft: #d8e4d4;
 
-  /* Surfaces — Light */
-  --kubo-bg: #f9f9f7;
-  --kubo-surface: #ffffff;
-  --kubo-surface-soft: #f8fafc;
-  --kubo-surface-mute: #f1f5f9;
-  --kubo-surface-inv: #0f172a;
+  /* Tomate */
+  --kubo-tomato: #e87c4e;
+  --kubo-tomato-soft: #fbe4d4;
+  --kubo-tomato-deep: #a3431f;
 
-  /* Borders — Light */
-  --kubo-border: #f1f5f9;
-  --kubo-border-mid: rgba(226, 232, 240, 0.6);
+  /* Ocre */
+  --kubo-ochre: #e8b84e;
+  --kubo-ochre-soft: #f7e8c2;
 
-  /* Text — Light */
-  --kubo-text: #0f172a;
-  --kubo-text-muted: #94a3b8;
-  --kubo-text-faint: #cbd5e1;
+  /* Bleu + Plum */
+  --kubo-blue: #6c8ec1;
+  --kubo-blue-soft: #d9e3f0;
+  --kubo-plum: #8c5a7a;
+  --kubo-plum-soft: #ecd9e3;
+
+  /* Surfaces */
+  --kubo-bg: #f5f1e8;
+  --kubo-bg-2: #ede7d4;
+  --kubo-surface: #fffdf7;
+  --kubo-surface-soft: #ebe5d6;
+  --kubo-surface-mute: #f5f1e8;
+  --kubo-surface-inv: #1a2422;
+
+  /* Borders */
+  --kubo-border: #e3dccb;
+  --kubo-border-mid: #cfc6b0;
+
+  /* Text */
+  --kubo-text: #1a2422;
+  --kubo-text-muted: #5a665f;
+  --kubo-text-faint: #94a397;
+  --kubo-text-ghost: #b8c3b9;
 
   /* Macro colours */
-  --kubo-prot: #3b82f6;
-  --kubo-fat: #f97316;
-  --kubo-carb: #10b981;
+  --kubo-prot: #6c8ec1;
+  --kubo-fat: #e87c4e;
+  --kubo-carb: #4a7c59;
 
   /* Tag colours */
-  --kubo-tag-green: #059669;
-  --kubo-tag-red: #dc2626;
-  --kubo-tag-blue: #2563eb;
-  --kubo-tag-orange: #ea580c;
-  --kubo-tag-purple: #7c3aed;
-  --kubo-tag-default: #64748b;
+  --kubo-tag-green: #4a7c59;
+  --kubo-tag-red: #a3431f;
+  --kubo-tag-blue: #4a6e9c;
+  --kubo-tag-orange: #a3431f;
+  --kubo-tag-purple: #6b3a56;
+  --kubo-tag-default: #5a665f;
 
   /* Radius */
   --radius-xs: 8px;
-  --radius-sm: 12px;
+  --radius-sm: 10px;
   --radius-md: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
-  --radius-2xl: 40px;
-  --radius-3xl: 48px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-3xl: 40px;
+  --radius-pill: 999px;
 
   /* Shadow */
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.12);
+  --shadow-card: 0 1px 3px rgba(26, 36, 34, 0.04), 0 2px 10px rgba(26, 36, 34, 0.05);
+  --shadow-lg: 0 8px 24px rgba(26, 36, 34, 0.07), 0 2px 6px rgba(26, 36, 34, 0.04);
 
   /* Transitions */
-  --transition-base: 0.3s ease;
+  --transition-base: 0.18s ease;
   --transition-bounce: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
   /* Typography */
-  --font-base: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-base: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 /* ---- Dark mode ---- */
 .dark {
-  --kubo-bg: #020617;
-  --kubo-surface: #0f172a;
-  --kubo-surface-soft: #1e293b;
-  --kubo-surface-mute: #1e293b;
-  --kubo-surface-inv: #ffffff;
+  --kubo-bg: #0f1411;
+  --kubo-bg-2: #161c18;
+  --kubo-surface: #1a2220;
+  --kubo-surface-soft: #232b27;
+  --kubo-surface-mute: #131815;
+  --kubo-surface-inv: #f2efe5;
 
-  --kubo-border: #1e293b;
-  --kubo-border-mid: rgba(30, 41, 59, 0.8);
+  --kubo-border: #2a332e;
+  --kubo-border-mid: #3a4540;
 
-  --kubo-text: #f1f5f9;
-  --kubo-text-muted: #64748b;
-  --kubo-text-faint: #334155;
+  --kubo-text: #f2efe5;
+  --kubo-text-muted: #a8b3aa;
+  --kubo-text-faint: #6e7a72;
+  --kubo-text-ghost: #4a5450;
 
-  --kubo-green-light: rgba(0, 163, 94, 0.15);
+  --kubo-green: #6ea27a;
+  --kubo-green-dark: #8fc09a;
+  --kubo-green-light: #2a3d31;
+  --kubo-green-shadow: rgba(110, 162, 122, 0.18);
+  --kubo-sage-deep: #c5dec9;
+  --kubo-sage-soft: #2a3d31;
+
+  --kubo-tomato: #f08960;
+  --kubo-tomato-soft: #3a221a;
+  --kubo-tomato-deep: #f3a98c;
+
+  --kubo-ochre-soft: #3a2e16;
+  --kubo-blue-soft: #1e2a3a;
+  --kubo-plum-soft: #3a2837;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* ---- Reset ---- */
@@ -93,7 +133,7 @@ body {
   background-color: var(--kubo-bg);
   color: var(--kubo-text);
   min-height: 100vh;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -116,6 +156,31 @@ body {
   border-radius: 10px;
 }
 
+/* ---- Display type helper ---- */
+.kb-h1 {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 38px;
+  letter-spacing: -1px;
+  line-height: 1.05;
+  color: var(--kubo-text);
+}
+.kb-h1 .roman {
+  font-style: normal;
+  font-weight: 700;
+}
+.kb-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--kubo-text-faint);
+  font-weight: 700;
+}
+.kb-mono {
+  font-family: var(--font-mono);
+}
+
 /* ---- Animations ---- */
 @keyframes kuboFadeIn {
   from {
@@ -128,7 +193,13 @@ body {
   }
 }
 .fade-in {
-  animation: kuboFadeIn 0.4s ease-out;
+  animation: kuboFadeIn 0.35s ease-out;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ---- Focus visible global ---- */

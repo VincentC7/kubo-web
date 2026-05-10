@@ -38,9 +38,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
       <!-- Logo -->
       <div class="auth-modal__logo">
-        <div class="auth-modal__logo-icon">
-          <span class="auth-modal__logo-k">K</span>
-        </div>
+        <div class="auth-modal__logo-mark">k</div>
         <span class="auth-modal__logo-name">kubo</span>
       </div>
 
@@ -75,9 +73,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   overflow-y: auto;
   background: var(--kubo-surface);
   border: 1px solid var(--kubo-border);
-  border-radius: 28px;
+  border-radius: var(--radius-2xl);
   padding: 40px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
 }
 
 /* ── Croix ── */
@@ -107,30 +105,32 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .auth-modal__logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 28px;
+  gap: 11px;
+  margin-bottom: 32px;
 }
-.auth-modal__logo-icon {
+.auth-modal__logo-mark {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   background: var(--kubo-green);
+  color: var(--kubo-surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px var(--kubo-green-shadow);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 22px;
   flex-shrink: 0;
-}
-.auth-modal__logo-k {
-  color: #fff;
-  font-weight: 900;
-  font-size: 20px;
-  line-height: 1;
+  box-shadow: 0 4px 12px var(--kubo-green-shadow);
 }
 .auth-modal__logo-name {
-  font-size: 24px;
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  color: var(--kubo-green);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  color: var(--kubo-sage-deep);
+  line-height: 1;
 }
 </style>
